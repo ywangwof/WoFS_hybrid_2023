@@ -1,0 +1,1492 @@
+!
+!     ##################################################################
+!     ##################################################################
+!     ######                                                      ######
+!     ######       INPUT FILE FOR NEWSVAR IN NAMELIST FORMAT      ######
+!     ######                                                      ######
+!     ##################################################################
+!     ##################################################################
+!
+*-----------------------------------------------------------------------
+!
+!  This file contains the input parameters in the NAMELIST format.
+!  for program NEWS3DVAR.
+!
+!  Note that only lines between &NAMELIST_NAME and / are read as the
+!  input data, and there must be a blank space in front of the '&' sign.
+!  Comments can be written between these data blocks.
+!
+!  We are using '!' in the first column of comment line only to distinguish
+!  them from the data statement.
+!                                                                     =*
+*-----------------------------------------------------------------------
+!
+! Author:
+!
+! Yunheng Wang (03/08/2017)
+!
+! Modification history:
+!
+!---------------------------------------------------------------------=*
+
+*-----------------------------------------------------------------------
+!
+!  MESSAGE_PASSING  Namelist for message passing version of the ARPS.
+!                   These values are ignored for the non-MP version.
+!
+!  nproc_x      Number of processors in the x-direction.
+!  nproc_y      Number of processors in the y-direction.
+!               Note that if (nx-3)/nproc_x or (ny-3)/nproc_y are not
+!               integers, ny & ny will be increased so that they are.
+!
+!  max_fopen    Maximum number of files allowed open when reading or
+!               writing, a number smaller than the number of processors
+!               can be used if dictated by the computing platform.
+!               However, the system will set max_fopen = number of
+!               processors automatically when needing to read in a sounding
+!               file for initopt=1.
+!
+!  nproc_x_out  Number of patches in x-direction for output
+!  nproc_y_out  Number of patches in y-direction for output
+!
+!        NOTE:  If those parameters are specified, they must be multiples of
+!               nproc_x/nproc_y respectively. Furthermore, the grid sizes of
+!               each output patch must also be an integer, i.e.
+!               MOD((nx-3),nproc_x_out) = 0 and MOD((ny-3),nproc_y_out) = 0.
+!               Currently, it is only supported with HDF4 and netCDF format.
+!
+!               To enable fine tuning with ARPS data sets, you should also
+!               specify special value with the following. Otherwise, these
+!               two parameters will not take effect.
+!
+!                 hdmpfmt > 100 for ARPS history files, for example, 103, 107
+!                 exbcdmp > 100 for ARPS lateral boundary files
+!                 soildmp > 100 for soil data files,
+!
+!               Currently, only the above three datasets and data format
+!               103 and 107 are supported.
+!
+!---------------------------------------------------------------------=*
+
+ &message_passing
+  nproc_x=4,
+  nproc_y=4,
+
+   max_fopen = 16,
+
+  nproc_x_in = 1,
+  nproc_y_in = 1,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  COMMENT_LINES Comments
+!
+!  nocmnt     Number of comment lines (max=50 comments)
+!  cmnt       Comments (max length=80 characters)
+!
+!-----------------------------------------------------------------------
+
+ &comment_lines
+   nocmnt  = 2,
+   cmnt(1) = 'NEWSVAR 2.0',
+   cmnt(2) = 'Del City Storm Simulation',
+ /
+
+!-----------------------------------------------------------------------
+!
+!  runname, a string of up to 80 characters long, is used to identify
+!  this job.
+!
+!  The first 6 characters, or the characters before either a blank space or
+!  comma, will be used to construct output file names. Not more than 6
+!  characters are used to define runname. This character string will be
+!  printed on plots produced by ARPSPLT.
+!
+!-----------------------------------------------------------------------
+
+ &jobname
+  runname='var200906112330',
+ /
+
+!-----------------------------------------------------------------------
+!
+!  initime = 'yyyy-mm-dd.hr:mn:se', UTC(GMT) date/time. yyyy is a
+!                                   4-digit integer for year, and mm, dd,
+!                                   hr, mn, and se are 2-digit integers
+!                                   for month, day, hour, minute, and
+!                                   second, respectively. For example,
+!                                   20:30Z, Dec. 19, 1994 would be
+!                                   represented as: 1994-12-19.20:30:00
+!
+!  initopt   Model initialization option.
+!          = 1, initialize using analytic functions
+!          = 2, initialize from a restart file
+!          = 3, initialize from an external data set. See inifmt below
+!               for available history data formats.
+!          = 4, read in the restart file then overwrite the variables at
+!               the current time level using those in history file.
+!
+!  inifmt   Data format of external data files (inifile, inigbf)
+!           for initopt = 3.
+!          = 1,  unformatted binary data;
+!          = 3,  NCSA HDF format data;
+!          = 7,  NetCDF format;
+!          = 8,  Packed NetCDF format;
+!          = 10, GRIB format
+!
+!  inisplited Flag to indicate whether the external data file (inifile,
+!             inigbf, exbcname, terndta, sfcdtfl, soilinfl, rstinf etc.)
+!             is in a single joined file or in multiple files which were
+!             created using splitfiles. Valid for MPI mode and initopt = 3.
+!          = 0, external data file is in a single file. The program should
+!               split the file on-the-fly.
+!          = 1, external files have already been split for each processor.
+!
+!          Introduced 'bit' control since arps5.3.2 (see instruciton for
+!          dmp_out_joined for details). The bit order is "I A T S B R H".
+!
+!    NOTE: See the restriction for "max_fopen" flag when inisplited = 0.
+!          Split-on-the-fly only works with binary and HDF format.
+!
+!  inifile  Name of external data history file acts as analysis background
+!  inigbf   Name of base-state/grid file for modelopt = 1 only.
+!
+!
+!-----------------------------------------------------------------------
+
+ &initialization
+  modelopt     =  2,
+  initime='2009-06-11.23:30:00',
+
+  inifmt=3,
+  inisplited=0,
+  inifile='./int_dat/wrfinput_d01',
+  inigbf='./int_dat/int200906112330.hdfgrdbas',
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Grid specification section (Used only when use_arps_metrics = .TRUE.)
+!
+!  dz       Averaged vertical grid spacing in transformed
+!           computational space (m).
+!
+!  strhopt  Grid stretching option.
+!         = 0, no vertical stretching;
+!         = 1, vertical stretching with f=z**3 function for dz;
+!         = 2, vertical stretching with hyperbolic tangent (see User's Guide).
+!  dzmin    Minimum vertical grid spacing in physical space (m). Used
+!           if strhopt = 1 or 2.
+!  zrefsfc  Reference height of the surface (ground level) (m).
+!
+!  dlayer1  Height (m) of the layer beneath which stretching is not applied.
+!           0.0 =< dlayer1 < (nz-3)*dz
+!
+!  dlayer2  Depth of the mid-layer with stretched vertical spacing (m)
+!           0.0 =< dlayer2 < (nz-3)*dz and 0.0 =< dlayer1+dlayer2 < (nz-3)*dz
+!           For consistency, dlayer2 is reset to: min(dlayer2,ztop-dlayer1).
+!
+!  strhtune Tuning parameter used when strhopt = 2.
+!           A value between 0.2 and 5.0 is recommended. Stretching
+!           becomes more linear as strhtune increases. Default value is 1.0.
+!
+!  zflat    Height at which the grid becomes flat in the
+!           terrain-following coordinate transformation (m).
+!
+!-----------------------------------------------------------------------
+
+ &grid
+   dz       =  600.0,
+   strhopt  = 2,
+     dzmin    =  400.0,
+     zrefsfc  =     0.0,
+     dlayer1  =     2000.0,
+     dlayer2  =   100000.0,
+     strhtune =     5.0,
+   zflat    =      10000.0,
+ /
+
+*-----------------------------------------------------------------------
+!
+!  The following surface parameters are valid for sfcphy = 3 and 4:
+!
+!  soilmodel_option Soil model scheme option
+!	  = 1, Two-layer Force-restore model (Noilhan/Planton scheme)
+!	  = 2, Multi-layer 'OUSoil' scheme (Based on OSU/NCEP ETA scheme)
+!
+!  nzsoil   Number of soil layers. Maximum number of levels is 100.
+!
+!  dzsoil   Averaged vertical grid spacing in transformed
+!	    computational space (m).
+!
+!  zrefsoil Reference height of the surface (below ground level) (m).
+!
+!  soilstrhopt	Grid soil stretching option.
+!	  = 0, no vertical stretching
+!	  = 1, vertical stretching with f=z**3 function for dz
+!	  = 2, vertical stretching with hyperbolic tangent (see User's Guide).
+!   = 9, special for arps2wrf with NARR, SREF or NAM data, combined with
+!        soilmodel_option = 2, to assign 6 levels as in WPS (all other
+!        parameters under this category are void)
+!        (F. Kong, Jan 2008)
+!   = 10, Same as soilstrhopt = 9, but for processing ECMWF dataset,
+!         which defines different soil layers as NCEP datasets.
+!
+!  NOTE THAT nzsoil must be 6 for soilstrhopt = 9 and soilstrhopt = 10.
+!
+!  soildzmin	Minimum vertical grid spacing in physical space (m). Used
+!	    if soilstrhopt = 1 or 2.
+!
+!  soildlayer1	Height (m) of the layer beneath which stretching is not applied.
+!	    0.0 =< dlayer1 < (nz-3)*dz
+!
+!  soildlayer2	Depth of the mid-layer with stretched vertical spacing (m)
+!	    0.0 =< dlayer2 < (nz-3)*dz and 0.0 =< dlayer1+dlayer2 < (nz-3)*dz
+!	    For consistency, dlayer2 is reset to: min(dlayer2,ztop-dlayer1).
+!
+!  soilstrhtune Tuning parameter used when soilstrhopt = 2.
+!	    A value between 0.2 and 5.0 is recommended. Stretching
+!	    becomes more linear as strhtune increases. Default value is 1.0.
+!
+!---------------------------------------------------------------------=*
+
+ &soil_ebm
+   soilmodel_option = 1,
+     dzsoil   = 1.0,
+     zrefsoil = 0.0,
+
+   soilstrhopt  = 0,
+     soildzmin    =     0.01,
+     soildlayer1  =     0.0,
+     soildlayer2  =     1.0,
+     soilstrhtune =     1.0,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  History dump parameters.
+!
+!  hdmpfmt   History data dump format option.
+!          = 0, no data dump is produced
+!          = 1, unformatted binary data dump
+!          = 3, NCSA HDF4 format data dump
+!          = 7, NetCDF format
+!          = 8, NetCDF format with data of all time levels in one file;
+!               It is suitable for small domain and is provided for LEAD.
+!          = 9, GrADS data dump
+!          = 11, Vis5D data dump.
+!
+!           For WRF Analysis data files
+!          = 0,   Output only analyzed fields
+!          = 1,   Output all fields in inifile
+!          = 100, Output analyzed and copied fields only
+!
+!-----------------------------------------------------------------------
+
+ &history_dump
+     hdmpfmt=0,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Output control parameters.
+!
+!  dirname   Name of directory into which output files are written.
+!            It accepts two patterns for writing output files into individual
+!            folders. One is to create saparate diretory for each forecast time
+!            in seconds. For example,
+!              dirname = './data%9T',
+!            The program will create the following directories:
+!              './data003600.00',
+!              './data007200.00',
+!              ...
+!              etc.
+!
+!            Another pattern is for ensemble member when running ARPSEnKF.
+!              dirname = './EN%3N',
+!            The program will generate the following directories for each
+!            ensemble member:
+!              './EN001',
+!              './EN002',
+!              ...
+!              etc. and
+!              './ENfmean' for prior mean outputs
+!              './ENamean' for post  mean outputs
+!
+!            If there is a paterrn present, the pattern must be the last component
+!            of the path and user must has write priviledge on its immediate parent
+!            folder.
+!
+!  readyfl   Option to create a marker file (same name as the history dump
+!            but with "_ready" appended to the end) to indicate that
+!            writing of the history dump has completed.
+!          = 0, do not create a ready file.
+!          = 1, create a ready file;
+!
+!  refout    Option to dumap REFMOSAIC3D - radar reflectivity mosaic
+!          = 0, not output
+!          = 1, output in the final analysis file only
+!          = 7, output in netCDF format
+!          > 200,  Stop the program after output, for example 207
+!                  output in netCDF format and also stop the program immediately.
+!
+!-----------------------------------------------------------------------
+
+ &output
+   dirname  = './',
+   readyfl  = 1,
+   refout   = 1,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Debug information printing level.
+!
+!  lvldbg    Level of debug information printing.
+!          =0, no printing;
+!          =1, Print variables in big t-step;
+!          =2, Print forcings in big t-step;
+!          =3, Print variables in small t-step;
+!          =4, Print forcings in small t-step;
+!          =5, Print individual forcing terms and misc. info.
+!          >90, Print verbose outputs for most of the programs,
+!               adas, ext2arps etc.
+!
+!-----------------------------------------------------------------------
+
+ &debug
+   lvldbg = 0,
+ /
+
+!=======================================================================
+!
+!     ADAS analysis input parameters (Some are used by NEWS3DVAR also)
+!
+!=======================================================================
+
+!-----------------------------------------------------------------------
+!
+!  ADAS (or 3DVAR) increment output
+!  For use in ARPS model nudging scheme.
+!
+!   incrdmp  Option to write ADAS analysis increments to a file
+!            = 0  Don't create increment file
+!            = 1  write increment file (unformatted IEEE binary)
+!            = 3  write HDF uncompressed format increment file
+!
+!   incrhdfcompr  HDF4 compression option (for incrdmp=3)
+!          = 0 (default), no compression
+!          = 1, fast gzip compression
+!          = 2, high gzip compression
+!          = 3, adaptive or skipping Huffman compression
+!          = 4-7, as above plus mapping reals to 16 bit integers
+!            Note that only options 0-2 work on Cray platforms.
+!
+!   incdmpf  Character*133
+!            Name of increment output file
+!   uincdmp  Option to write u analysis increments if incrdmp = 1
+!            = 0  Don't write u increments
+!            = 1  Write u increments
+!
+!   And similarly for the other analysis variables specified by
+!             vincdmp,wincdmp,pincdmp,ptincdmp,qvincdmp,
+!             qcincdmp,qrincdmp,qiincdmp,qsincdmp,qhincdmp
+!
+!-----------------------------------------------------------------------
+
+ &incr_out
+    incrdmp = 0,
+    incrhdfcompr = 0,
+    incdmpf='mar3018z.incr',
+    uincdmp = 1,
+    vincdmp = 1,
+    wincdmp = 0,
+    pincdmp = 1,
+    ptincdmp= 1,
+    qvincdmp= 1,
+    qcincdmp= 1,
+    qrincdmp= 1,
+    qiincdmp= 0,
+    qsincdmp= 0,
+    qhincdmp= 0,
+ /
+
+!-----------------------------------------------------------------------
+!
+!     npass    number of analysis iterations
+!     sprdist  superob distance (m)
+!              closer pairs of sfc stations are made into superob
+!              this should be about 2 times dx
+!     wlim     min horizontal correlation -- establishes max horiz radius
+!     zwlim    min vertical   correlation -- establishes max vert radius
+!                             for iterations where vertical correlation is
+!                             determined by height separation
+!     thwlim   min vertical   correlation -- establishes max vert radius
+!                             for iterations where vertical correlation is
+!                             determined by potential temperature separation
+!
+!     spradopt Option for correcting superadiabatic layers.
+!              = 0  No correction applied
+!                   Could result in instabilities developing in the ARPS model
+!                   if the analysis creates superadiabatic layers.
+!              = 1  Correction applied beginning at the top,
+!                   cooling levels below where superadiabatic
+!              = 2  Correction applied beginning at the surface,
+!                   warming levels above where superadiabatic
+!              Option 2 provides greater fidelity to surface data,
+!              but may result in overwarming of the boundary layer
+!              For analysis-only applications, use spradopt = 0.
+!
+!     ccatopt  Option for applying correlation categories based on
+!              background data.
+!              = 0  Isotropic correlation functions used.
+!              = 1  Correlation is reduced between dry areas
+!                   and areas of precipitation, especially where the
+!                   cumulus parameterization is activated.
+!              ccatopt=1 recommended when ADAS is run using a
+!              background field from an ADAS run with cumulus
+!              parameterization activated.   Otherwise, use ccatopt=0.
+!
+!-----------------------------------------------------------------------
+
+ &adas_const
+   npass = 4,
+   sprdist = 15000.,
+   wlim = 1.E-04,
+   zwlim = 1.E-03,
+   thwlim = 1.E-03,
+   spradopt = 0,
+   ccatopt = 1,
+ /
+
+!-----------------------------------------------------------------------
+!  Variables associated with hydrostatic and wind adjustments.
+!  NOTE: this namelist block is used by both ADAS and EXT2ARPS.
+!
+!    hydradj    Option for adjusting pressure to balance gravity
+!               and buoyancy to force dw/dt=0 for output field.
+!               = 0    no correction
+!               = 1    correction applied beginning at surface
+!               = 2    correction applied beginning at top
+!               = 3    hydrostatic equation integrated from
+!                      surface for total-p, pbar subtracted.
+!               hydradj=0 suggested
+!
+!     wndadj   Option for adjusting interpolated winds.
+!               = 0  no adjustment from read-in values
+!                    if w is not read-in, it is set to zero
+!               = 1  w set so that wcont = 0, no adjustment to u or v
+!               = 2  w set using integrated divergence with OBrien
+!                    correction to satisfy top and bottom bc
+!               = 3  as in 2, but u and v adjusted for
+!                    to remove 3-D divergence.
+!
+!    obropt     O'Brien adjustment option.  Determines
+!               distribution of mean divergence error used to
+!               enforce upper boundary condition of w=0
+!               = 1  Linearly in computational z. (default)
+!               = 2  Linearly in physical z.
+!               = 3  Linearly in potential temperature.
+!
+!               Adding 10 to the previously listed options makes w=0 at
+!               the level whose mean height is set by obrzero (meters).
+!
+!               obropt=11 is recommended for most
+!               ext2arps applications to large-scale models
+!
+!     obrzero   Height to set w=0 in O'Brien correction routines.
+!
+!-----------------------------------------------------------------------
+
+ &adjust
+   hydradj = 0,
+   wndadj = 2,
+   obropt = 12,
+   obrzero = 12000.,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Variables affecting the use of radar data in the analysis step
+!  and in the microphysical (local) adjustment routine.
+!
+!     radrhobs   Switch to create pseudo-obs of high relative humidty
+!                for use in qv analysis (effect will be spread in space).
+!                where reflectivity is high
+!                 = 0  Do not create high-RH obs from reflectivity data
+!                 = 1  Create obs
+!
+!     radistride Horizontal stride for resampling radar data during successive
+!                corrections portion of analysis.  Full resolution data
+!                are always used in cloud analysis.
+!                = 1   All data are used
+!                = 2   Every-other data column used mod((i+j),2)=0
+!                = n   Every-nth data pt used mod((i+j),n)=0
+!
+!     radkstride As in radistride, except in vertical.
+!
+!     refrh      Reflectivity threshold (dBZ) to use in creating high-RH obs
+!                (used when radrhobs = 1)
+!
+!     rhradobs   Relative humidity (0.0-1.0) to apply to pseudo-obs
+!                If the background humidity is higher, no ob is created
+!                (scheme cannot dry air).  (used when radrhobs = 1)
+!
+!  Variables affecting the local adjustment of microphysical variables
+!  based on radar reflectivity.  Note: This approach to estimating hydrometeors
+!  is retained for comparison testing, but the approach in the cloud analysis is
+!  recommended (radcldopt=0 and cloudopt=1).
+!
+!     radcldopt= Option for calling routine to make local adjustments
+!                 = 0  Do not call RADMCRO, following options are OFF
+!                 = 1  Call RADMCRO
+!
+!     radqvopt = Switch for using reflectivity to locally adjust
+!                (no spreading via analysis) relative humidity (qv)
+!                where reflectivity is high
+!                 = 0  Do not adjust qv locally based on reflectivity data
+!                 = 1  Adjust qv
+!
+!     radqcopt = Switch for using reflectivity to locally adjust
+!                (no spreading via analysis) cloud water (qc)
+!                where reflectivity is high
+!                 = 0  Do not adjust qc locally based on reflectivity data
+!                 = 1  Adjust qc using fixed cloud water mixing ratio
+!                 = 2  Adjust qc using cloud water mixing ratio that is
+!                      a function of observed reflectivity.
+!
+!     radqropt = Switch for using reflectivity to locally adjust
+!                (no spreading via analysis) rain water (qr)
+!                where reflectivity is high
+!                 = 0  Do not adjust qr locally based from reflectivity data
+!                 = 1  Adjust qr using rain water mixing ratio that is
+!                      a function of observed reflectivity.
+!
+!     radptopt = Switch for adjusting potential temperature to create
+!                a net zero buoyancy change in combination with the weight
+!                added by increasing qr and qc and/or the weight removed by
+!                increasing qv.
+!                 = 0  Do not adjust potential temperature
+!                 = 1  Adjust temperature for rain and cloud water only
+!                 = 2  Adjust temperature for humidity adjustment only
+!                 = 3  Adjust for ALL changes to qr, qc, and qv
+!
+!     refsat     Reflectivity threshold (dBZ) to use in local
+!                "saturation" adjustment.
+!
+!     rhrad      Relative humidity (0.0-1.0) to apply in local satuartion
+!                adjustment.  No adjustment is made if background humidity
+!                is higher.
+!
+!     refcld     Reflectivity threshold (dBZ) to use in local
+!                cloud water adjustment.
+!
+!     cldrad     Fixed value of cloud water mixing ratio (gr/gr) to use
+!                when radqcopt=1.
+!
+!     ceilopt    Option for limiting ceiling (cloud base) in applying the
+!                radar-based local adjustments.
+!                 = 0   No ceiling limit (surface)
+!                 = 1   Ceiling limited by fixed height AGL
+!                 = 2   Ceiling limited by the LCL of a surface-based parcel
+!
+!     ceilmin    Minimum ceiling (m AGL) for ceilopt=1.
+!
+!     dzfill     Vertical distance (m) across which two adjacent non-zero
+!                reflectivities will be "filled" -- to account for vertical
+!                gaps in the radar coverage pattern.
+!
+!     refrain    Reflectivity threshold (dBZ) to use in local
+!                rain water adjustment.
+!
+!     cldsetrat  Ratio (0.0-1.0) of rain and cloud water adjustment applied to
+!                the radar-reflectivity equivalent value of rain and cloud
+!                water.  Used when radqcopt=2 or radqropt=2.
+!
+!     cldreflim  Upper bound on reflectivity (dBZ) to use in calculating the
+!                rain and cloud water when radqcopt=2 or radqropt=2.
+!
+!-----------------------------------------------------------------------
+
+ &adas_radaropt
+   radrhobs = 0,
+   radistride = 1,
+   radkstride = 1,
+   refrh = 25.,
+   rhradobs = 0.90,
+
+   radcldopt = 0,
+   radqvopt = 1,
+   radqcopt = 1,
+   radqropt = 1,
+   radptopt = 1,
+   refsat = 25.,
+   rhrad = 0.90,
+   refcld = 30.,
+   cldrad = 0.001,
+   ceilopt = 2,
+   ceilmin = 1500.,
+   dzfill = 3000.,
+   refrain = 40.,
+   radsetrat = 0.50,
+   radreflim = 45.,
+   radptgain = 1.1,
+ /
+
+!----------------------------------------------------------------------
+!
+!     ADAS Complex Cloud diagnosis
+!     Derived from LAPS cloud analysis with modifications
+!     Reference:  Zhang et al, 1998, Brewster 2002
+!
+!     Using surface observations (SAO, METAR), radar and satellite
+!     determine 3-d cloud coverage, and estimate type.  Adjust
+!     cloud and rainwater fields and estimate w.
+!
+!     Operates separately (after) the radar cloud and rainwater
+!     assignment scheme (if activiated).
+!
+!     cloudopt=  Option for calling routine for complex cloud analysis
+!                 = 0  Do not run complex cloud analysis, following
+!                      options are OFF
+!                 = 1  Run complex cloud analysis using all possible
+!                      data sources (surface, radar, and satellite)
+!                 = 2  Run complex cloud analysis using RADAR data only
+!                 = 3  Run complex cloud analysis using warm-rain only
+!                 = 4  Run complex cloud analysis in cycling mode.
+!                      Precip from radar assigned according to background
+!                      species distributions.  In cycling, start with
+!                      cloudopt=1, then use cloudopt=4 for subsequent cycles.
+!
+!     clddiag    Option for diagnostic printing from cloud routine
+!                 = 0   No cloud diagnostics
+!                 = 1   Cloud diagnostic
+!
+!     cld_files  Option to output files containing intermediate cloud
+!                fields (cloud base, cloud top, ceiling, and column VIL)
+!                into separate files (not ARPS output files)
+!                 = 0   Do not write cloud files
+!                 = 1   Write cloud files
+!
+!     range_cld  Cut-off radius (m) for Barnes of cloud cover.
+!
+!     refthr1    Reflectivity (dBZ) threshold for setting clouds at
+!                heights below hgt_thresh_ref.  See notes under
+!                hgt_thresh_ref.
+!
+!     refthr2    Reflectivity (dBZ) threshold for setting clouds at
+!                heights above hgt_thresh_ref.  See notes under
+!                hgt_thresh_ref.
+!
+!     hgtrefthr  Height (m AGL) of changeover from using ref_base1 to
+!                using ref_base2.  Generally below hgt_thresh_ref,
+!                ref_base1 is set to eliminate false ground clutter,
+!                and above ref_base2 is set to eliminate false
+!                insect or non-precipitation scatter returns.
+!
+!     thresh_cvr Threshold of sky cover (0.0-1.0) to set cloud water and
+!                vertical velocity.  Below thresh_cvr no cloud water or
+!                w adjustments are made.
+!
+!     bgqcopt    Option to create cloud water (qc or qi) in the cloud
+!                analysis in areas of high relative humidity in the
+!                background field.
+!                Note, the qc or qi created by this option is not passed
+!                to the output file unless cldqcopt=1 (see below).
+!                 = 0   Do not use background RH for qc
+!                 = 1   Create qc,qi from background RH
+!
+!     cldqvopt   Option to apply humidity adjustments to output
+!                 = 0   Do not use qv adjustments
+!                 = 1   Use cloud qv
+!                 = 2,  qv adjustment dependency on w and temperature
+!                       following the work of ChongChi Tong.
+!                 = 3,  Use ZDR columns by Jacob T. Carlin
+!                 = 4,5 Determine convection based on reflectivity
+!                 = 6,  Consider observed VIL and background VIL
+!
+!             NOTES:   Options (4,5,6) was added by Anwei Lai on April 24, 2018
+!
+!     rh_thr1    lower end value of RH for the linear cldcvr_to_RH
+!                relationship.
+!
+!     cvr2rh_thr1   lower end value of cloud cover for the linear
+!                   cldcvr_to_RH relationship.
+!
+!     rh_thr2    upper end value of RH for the linear cldcvr_to_RH
+!                relationship.
+!
+!     cvr2rh_thr2   upper end value of cloud cover for the linear
+!                   cldcvr_to_RH relationship.
+!
+!     cldqcopt   Option to apply cloud water adjustments to output
+!                Where temperature is cold enough, qi
+!                can also be affected.
+!                 = 0   Do not use qc and qi adjustments
+!                 = 1   Use cloud analysis qc and qi
+!
+!     qvslimit_2_qc  upper limit for analyzed qc to be put into
+!                    the output:
+!                    qc =< qvslimit_2_qc * qvs
+!
+!     cldqropt   Option to apply rain water adjustments to output
+!                Where temperature is cold enough, qs and qh
+!                can also be affected.
+!                 = 0   Do not make qr,qs and qh adjustments
+!                 = 1   Adjust qr,qs and qh using Kessler eqs
+!                 = 2   Adjust qr,qs and qh using Ferrier eqs
+!
+!     qrlimit        upper limit on analyzed qr (unit: kg/kg)
+!
+!     frac_qr_2_qc   Fraction of qr converted into qc (for initiali-
+!                      -zing and spinup model)
+!
+!     cldptopt   Option to apply potential temp adjustments to output.
+!
+!                 = 0   Do not use pt adjustments
+!                 = 1   Adjust pt-field to compensate for the change made
+!                       to buoyancy by cloud and precipitate fields.
+!                 = 2   Adjust pt-field to compensate for the change made
+!                       to buoyancy by humididy, cloud and precipitate
+!                       fields.
+!                 = 3   Adjust pt-field to account for the latent heating
+!                       from cloud water/ice.
+!                 = 4   Adjust pt-field to account for the latent heating
+!                       from cloud water/ice only where vertical vel > 0.
+!                 = 5   Adjust pt-field where clouds are analyzed and the
+!                       vertical velocity is > -0.2 for a moist-adiabatic
+!                       profile diluted by mixing.  For negative w a
+!                       fraction of the adjustment is applied ramping from
+!                       0.0 at -0.2 m/s to 1.0 at 0.0.
+!                 = 6   Adjust pt-field where clouds are analyzed and the
+!                       vertical velocity is > 0.0 for a moist-adiabatic
+!                       profile diluted by mixing.
+!                 = 7-9, Jidong's work in process
+!                 = 10, Adjust ptprt to moist-adiab cloud temp for ZDR col
+!
+!     frac_qw_2_pt  Gain factor for the potential temp. adjustment
+!                   based on buoyancy.(unit: nondimensional)
+!                   *used only when cldptopt=1, and 2.
+!
+!     frac_qc_2_lh  Gain factor for the potential temp. adjustment
+!                   based on latent heating.(unit: nondimensional)
+!                   *used only when cldptopt > 2
+!
+!     max_lh_2_pt  The upper limit on the amount of potential temp
+!                  adjustment based on latent heating  (unit: K)
+!                   *used only when cldptopt > 2
+!
+!     cldwopt    Option to apply w adjustments to output
+!                Not recomended for ARPS model runs
+!                 = 0   Do not use w adjustments
+!                 = 1   Use cloud w
+!
+!     wmhr_Cu    Parameter ((m/s)/m) used to set the maximum vertical
+!                velocity in cumulus clouds.  Maximum vertical
+!                velocity (parabola) is set based on wmhr_cu and cloud
+!                depth.
+!                w_max=wmhr_cu*depth
+!
+!     wmhr_Sc    Parameter ((m/s)/m) used to set the maximum vertical
+!                velocity in stratocumulus clouds.  Maximum vertical
+!                velocity (parabola) is set based on wmhr_cu and cloud
+!                depth.
+!                w_max=wmhr_cu*depth
+!
+!     wc_St      Constant vertical velocity (m/s) to assign to
+!                  stratus clouds.
+!
+!     smth_opt   Option to apply smoothing on the analyzed moisture
+!                and in-cloud w fields
+!                 = 0   Do not smooth
+!                 = 1   Apply 2D (horizontal) smoothing
+!                 = 2   Apply 3D smoothing
+!
+!     nirfiles   Number of IR files to be used, set to zero if no IR
+!                data are available
+!
+!     ir_fname   Name of remapped IR satellite data file(s)
+!                Set to 'NULL' or a dummy filename if no IR data are
+!                available.
+!     ir_calname Name of IR calibration file(s) for each IR file used.
+!
+!     nvisfiles  Number of visible satellite files to be used, set to
+!                zero if no visible data are available
+!
+!     vis_fname  Name of remapped visible satellite data file
+!                Set to 'NULL' or a dummy filename if no vis data are
+!                available.
+!
+!     vis_calname Name of visible calibration file(s) for each
+!                 vis file used.
+!
+!-----------------------------------------------------------------------
+
+ &adas_cloud
+   cloudopt= 0,
+   clddiag = 0,
+   cld_files = 0,
+
+   range_cld=100000,
+
+   refthr1=20,
+   refthr2=15,
+   hgtrefthr=1500,
+
+   thresh_cvr=0.65,
+
+   bgqcopt = 1,
+
+   cldqvopt=6,
+   rh_thr1 = 0.5,
+   cvr2rh_thr1=0.35,
+   rh_thr2=0.99,
+   cvr2rh_thr2=0.9,
+
+   cldqcopt=1,
+   qvslimit_2_qc = 1.0,
+   cldqropt=108,
+   qrlimit = 0.005,
+   frac_qr_2_qc = 0.0,
+
+   cldwopt = 0,
+   wmhr_Cu = 0.0005,
+   wmhr_Sc = 0.00005,
+   wc_St = 0.05,
+
+   cldptopt = 11,
+   frac_qw_2_pt=1,
+   frac_qc_2_lh = 1.0,
+   max_lh_2_pt = 8.0,
+
+   smth_opt = 1,
+
+   nirfiles     = 0,
+   ircalname(1)='calib/goes12ch4.adastab',
+   ircalname(2)='calib/goes11ch4.adastab',
+
+   nvisfiles    = 0,
+   viscalname(1)='calib/goes12vis.adastab',
+   viscalname(2)='calib/goes11vis.adastab',
+/
+
+!-----------------------------------------------------------------------
+!
+!     ADAS analysis type and correlation specification
+!
+!     sfcqcrng horizontal distance parameter for Barnes analysis used
+!              in surface data quality control routine.
+!
+!-----------------------------------------------------------------------
+
+ &adas_range
+   sfcqcrng = 100.E03,
+ /
+
+!-----------------------------------------------------------------------
+!
+!     ADAS data files and sources
+!
+!     backerrfil  Name of file containing background error statistics
+!
+!
+!-----------------------------------------------------------------------
+
+ &adas_backerf
+  backerrfil='calib/ruc4hybrid.adastab',
+ /
+!-----------------------------------------------------------------------
+!
+!     nsngfil  number of single-level data files
+!              nsngfil <= mx_sng_file (mx_sng_file set in adas.inc)
+!     sngfname name of single-level data file(s) (character*132 array)
+!     sngtmchk name of single-level data file to be used for the
+!              time consistency check for surface data.  Generally this
+!              is a file from a previous reporting period (e.g., one
+!              hour before the time of the data in sngfname).
+!
+!     Following are repeated for each data SOURCE in the data file(s).
+!     Note that a single-level file can contain one or more sources.
+!     Largest index, isrc,  used must be less than or equal to nsrc_sng
+!     (nsrc_sng set in adas.inc).
+!       srcsng(isrc)
+!                Name of this source (character*8 array)
+!       sngerrfil (isrc)
+!                Name of file containing data error statistics
+!                (character*132 array)
+!       iusesng(isrc,ipass)
+!                Flag for whether to use single-level data on each pass.
+!                Unnatural "bullseyes" can result when surface data are
+!                sparse and the xyrange variable is small, appropriate for
+!                use with radar data only.
+!                = 1  Use single-level source on pass number ipass
+!                = 0  Do not use sng-lvl source on pass number ipass
+!
+!-----------------------------------------------------------------------
+
+ &adas_sng
+   nsngfil = 0,
+   sngfname(1)='/work/study/19990503/lapsprd/sao/sao199905032200.lso',
+   sngtmchk(1)='/work/study/19990503/lapsprd/sao/sao199905032100.lso',
+   sngfname(2)='/work/study/19990503/lapsprd/okmeso/okmeso199905032200.lso',
+   sngtmchk(2)='/work/study/19990503/lapsprd/okmeso/okmeso199905032100.lso',
+
+   blackfil='calib/blacklist.sfc',
+   srcsng(1)='SA',
+      sngerrfil(1)='calib/saoerr.adastab',
+      iusesng(1,1)=0,iusesng(1,2)=0,iusesng(1,3)=0,iusesng(1,4)=0,
+   srcsng(2)='MESO',
+      sngerrfil(2)='calib/mesoerr.adastab',
+      iusesng(2,1)=0,iusesng(2,2)=0,iusesng(2,3)=0,iusesng(2,4)=0,
+   srcsng(3)='MOBLM',
+      sngerrfil(3)='calib/moblmerr.adastab',
+      iusesng(3,1)=0,iusesng(3,2)=0,iusesng(3,3)=0,iusesng(3,4)=0,
+   srcsng(4)='ARMMN',
+      sngerrfil(4)='calib/armmnerr.adastab',
+      iusesng(4,1)=0,iusesng(4,2)=0,iusesng(4,3)=0,iusesng(4,4)=0,
+   srcsng(5)='SYNOP',
+      sngerrfil(5)='calib/synoperr.adastab',
+      iusesng(5,1)=0,iusesng(5,2)=0,iusesng(5,3)=0,iusesng(5,4)=0,
+   srcsng(6)='SHIP',
+      sngerrfil(6)='calib/shiperr.adastab',
+      iusesng(6,1)=0,iusesng(6,2)=0,iusesng(6,3)=0,iusesng(6,4)=0,
+   srcsng(7)='BUOY',
+      sngerrfil(7)='calib/buoyerr.adastab',
+      iusesng(7,1)=0,iusesng(7,2)=0,iusesng(7,3)=0,iusesng(7,4)=0,
+ /
+
+!-----------------------------------------------------------------------
+!
+!     nuafil   number of multiple-level data file(s)
+!              nuafil <= mx_ua_file (mx_ua_file set in adas.inc)
+!     uafname  name of multiple-level data file(s) (character*132 array)
+!
+!     Following are repeated for each data SOURCE in the data file(s).\
+!     Generally multiple-level data files contain only one source, but
+!     several files may contain the same source.  Largest index, isrc,
+!     specified here must be less than or equal to nsrc_ua
+!     (nsrc_ua set in adas.inc).
+!       srcua(isrc)
+!                Name of this source (character*8 array)
+!       uaerrfil (isrc)
+!                Name of file containing data error statistics
+!                (character*132 array)
+!       iuseua(isrc,ipass)
+!                Flag for whether to use sounding data on each pass.
+!                Unnatural "bullseyes" can result when soundings are sparse
+!                and the xyrange variable is small, appropriate for
+!                surface and/or radar data.
+!                = 1  Use sounding data on pass number ipass
+!                = 0  Do not use sounding data on pass number ipass
+!
+!-----------------------------------------------------------------------
+
+ &adas_ua
+   nuafil = 1,
+   uafname(1)='/data1/archive/lapsprd/snd/951591500.snd',
+   uafname(2)='/data1/archive/lapsprd/pro/951591500.pro',
+   srcua(1)='NWS RAOB',
+      uaerrfil(1)='calib/raoberr.adastab',
+      iuseua(1,1)=0,iuseua(1,2)=0,iuseua(1,3)=0,iuseua(1,4)=0,
+   srcua(2)='FCLASS',
+      uaerrfil(2)='calib/fclasserr.adastab',
+      iuseua(2,1)=0,iuseua(2,2)=0,iuseua(2,3)=0,iuseua(2,4)=0,
+   srcua(3)='MCLASS',
+      uaerrfil(3)='calib/mclasserr.adastab',
+      iuseua(3,1)=0,iuseua(3,2)=0,iuseua(3,3)=0,iuseua(3,4)=0,
+   srcua(4)='WPDN PRO',
+      uaerrfil(4)='calib/wpdnerr.adastab',
+      iuseua(4,1)=0,iuseua(4,2)=0,iuseua(4,3)=0,iuseua(4,4)=0,
+   srcua(5)='88D VAD',
+      uaerrfil(5)='calib/vad88derr.adastab',
+      iuseua(5,1)=1,iuseua(5,2)=0,iuseua(5,3)=0,iuseua(5,4)=0,
+ /
+
+!----------------------------------------------------------------------
+!
+! Assimilation of Conventional observations from Prepbufr
+!
+! iuseconv(npass) :
+!
+!----------------------------------------------------------------------
+
+ &adas_conv
+  nconvfil = 1,
+  convfname = '/scratch/sijie.pan/HMT2018/20180719/1600Z/dom00/news3dvar/rtma.201807191600.prepbufr.tm00',
+  convinfofil = 'calib/doubled_error_tolerance.txt',
+  converrfil = 'calib/nam_errtable.r3dv',
+  iuseconv(:) = 1,0,0,0,
+ /
+
+!----------------------------------------------------------------------
+!
+! Assimilation of Cloud Water Path (CWP)
+!
+! cwpffmt  CWP observation file format
+!          = 1, two dimensions original files
+!          = 2, one dimensions QC'ed data
+!
+!----------------------------------------------------------------------
+
+ &adas_cwp
+  ncwpfil=0,
+  pseudo_opt = 0,
+  cwpfname(1)='CWPfileName',
+  cwpffmt = 2,
+  satcwpobs=1,
+  spctopt=1,
+  srccwp(1)='GOES-R',
+     cwperrfil(1)='calib/goescwperr.adastab',
+     iusecwp(1,1)=0,iusecwp(1,2)=0,iusecwp(1,3)=0,iusecwp(1,4)=0,
+ /
+
+!----------------------------------------------------------------------
+!
+! Assimilation of Total Precipitable Water (TPW)
+!
+!----------------------------------------------------------------------
+
+ &adas_tpw
+  ntpwfil=0,
+  tpwfname(1)='TPWfileName',
+  sattpwobs=1,
+  srctpw(1)='GOES-R',
+     tpwerrfil(1)='calib/goestpwerr.adastab',
+     iusetpw(1,1)=1,iusetpw(1,2)=0,iusetpw(1,3)=0,iusetpw(1,4)=0,
+     iusetpw(1,5)=0,iusetpw(1,6)=0,iusetpw(1,7)=0,iusetpw(1,8)=0,
+ /
+
+!-----------------------------------------------------------------------
+!
+!     nradfil  number of radar files
+!     nradfil <= mx_rad_file (mx_rad_file set in adas.inc)
+!     radfname name of radar files (character*132 array)
+!
+!     Following are repeated for each data SOURCE in the data file(s).
+!     Each radar file contains data from one radar, hence a single
+!     radar source, but many files may be from the same source.  Largest
+!     index, isrc, specified here must be less than or equal to nsrc_rad
+!     (nsrc_rad set in adas.inc).
+!       srcrad(isrc)
+!                Name of this source (character*8 array)
+!       raderrfil (isrc)
+!                Name of file containing data error statistics
+!                (character*132 array)
+!       iuserad  Flag for whether to use radar (refl and vr) data on each pass.
+!                Radar data are most effective when the scale-length has
+!                been reduced to 5-15km (through xyrange).  Using radar data
+!                can slow ADAS considerably.
+!                = 1  Use radar data on pass number ipass
+!                = 0  Do not use radar data on pass number ipass
+!-----------------------------------------------------------------------
+
+ &adas_radar
+  nradfil=3,
+  radfname(1)='./88d4grid/KPUX.20090611.2328.hdf4',
+  radfname(2)='./88d4grid/KFTG.20090611.2329.hdf4',
+  radfname(3)='./88d4grid/KGLD.20090611.2332.hdf4',
+  srcrad(1)='88D-AII',
+  raderrfil(1)='calib/rad88Derr.adastab',
+  iuserad(1,1)=0,iuserad(1,2)=1,iuserad(1,3)=1,iuserad(1,4)=0,
+  srcrad(2)='88D-NIDS',
+  raderrfil(2)='calib/radnidserr.adastab',
+  iuserad(2,1)=0,iuserad(2,2)=0,iuserad(2,3)=0,iuserad(2,4)=0,
+  srcrad(3)='CASA-IP1',
+  raderrfil(3)='calib/radcasaerr.adastab',
+  iuserad(3,1)=0,iuserad(3,2)=0,iuserad(3,3)=0,iuserad(3,4)=0,
+  srcrad(4)='TDWR',
+  raderrfil(4)='calib/radtdwrerr.adastab',
+  iuserad(4,1)=0,iuserad(4,2)=0,iuserad(4,3)=0,iuserad(4,4)=0,
+  srcrad(5)='88D-POL',
+  raderrfil(5)='calib/rad88dperr.adastab',
+  iuserad(5,1)=0,iuserad(5,2)=0,iuserad(5,3)=0,iuserad(5,4)=0,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Reflectivity option
+!
+!  refsrc   Reflectivity source option
+!          = 0, Use NEXRAD radar files in namelist block "adas_radar"
+!          = 1, Use MRMS data file
+!          = 3, Stage IV precipitation data in MRMS 1 km data format
+!               (used for intepolation only)
+!          = 4, Stage IV precipitation data in 4 km grib format
+!               (used for intepolation only)
+!
+!  reffmt   MRMS data file format
+!          = 1, GRIB2 format, NCEP operational MRMS data service,
+!               downloaded from 140.172.25.182 via LDM or HTTP.
+!          = 2, NSSL binary format
+!          = 202, NSSL binary format for composit reflectivity or Stage IV precipitation
+!          = 203, Stage IV precipitation in 4 Km grib file, file name must be
+!                 ST4.YYYYMMDDHH.01h
+!          = 7, netCDF format
+!
+!  refile   MRMS data file name including directory
+!
+!  iboxs, iboxe: Specify a bounded box to be extracted from the given
+!  jboxs, jboxe: (external) model domain. It is users' responsibility
+!                 to guarantee that the box should cover the analysis domain.
+!                 Currently only data in GRIB 2 format is supported.
+!           By default, the operational MRMS data has this dimensions
+!           nx = 7000, ny = 3500, dx = 0.01, dy = 0.01
+!           First grid latitude = 20.005, longitude = -60.005 (-129.995)
+!           nz = 33, (00.50, 00.75, 01.00, 01.25, 01.50,
+!                     01.75, 02.00, 02.25, 02.50, 02.75, 03.00, 03.50,
+!                     04.00, 04.50, 05.00, 05.50, 06.00, 06.50, 07.00,
+!                     07.50, 08.00, 08.50, 09.00, 10.00, 11.00, 12.00,
+!                     13.00, 14.00, 15.00, 16.00, 17.00, 18.00, 19.00 )
+!
+!  reforder Interpolation order from MRMS grid to the model grid
+!          = 1, Linear,
+!          = 2, Quadratic (no support yet)
+!
+!-----------------------------------------------------------------------
+
+ &obs_ref
+   refsrc = 0,
+   reffmt = 1,
+   refile = 'MRMS_MergedReflectivityQC_00.50_20141208-120035.grib2',
+   iboxs = 0, iboxe = -1, jboxs = 0, jboxe = -1,
+   reforder = 1,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Retrieval data (not used)
+!
+!     nretfil  number of files containing radar retrieval data
+!     retfname name of radar retrieval files (character*132 array)
+!
+!     Following are repeated for each data SOURCE in the data file(s).
+!     Each radar file contains data from one radar, hence a single
+!     retrieval source, but many files may be from the same source.  Largest
+!     index, isrc, specified here must be less than or equal to nsrc_ret
+!     (nsrc_ret set in adas.inc).
+!       srcret(isrc)
+!                Name of this source (character*8 array)
+!       reterrfil (isrc)
+!                Name of file containing data error statistics
+!                (character*132 array)
+!       iuseret  Flag for whether to use radar retrieval data on each pass.
+!                Radar data are most effective when the scale-length has
+!                been reduced to 5-15km (through xyrange).  Using numerous
+!                radar retrieval data can slow ADAS considerably.
+!                = 1  Use retrieval data on pass number ipass
+!                = 0  Do not use retrievals on pass number ipass
+!
+!-----------------------------------------------------------------------
+
+ &adas_retrieval
+   nretfil = 0,
+   retfname(1) = 'KTLXret.960526.1700',
+   srcret(1)='88D-RET',
+      reterrfil(1)='calib/ret88Derr.adastab',
+      iuseret(1,1)=0,iuseret(1,2)=0,iuseret(1,3)=0,iuseret(1,4)=0,
+ /
+
+!======================================================================
+!
+! Parameters for program 3DVAR
+!
+!======================================================================
+*----------------------------------------------------------------------
+!
+! 3DVAR iteration flags
+!
+! maxin : maxmum iteration number (Dimensioned by parameter npass)
+!
+! qobsrad_bdyopt  Radar observation boundary handling option
+!                 = 0, original one without distinguishing boundary zone
+!                 = 1, quality of observations within boundary zone are
+!                      linear reduced to background error covariance times
+!                      the factor "qback_factor".
+!                 = 2, Observations within the boundary zone will be
+!                      discarded for analysis.
+!                 > 10 (i.e. 11 or 12) the width of boundary zone will take
+!                      consider of the influence radius ("hradius" below) for
+!                      each pass.
+!
+! qobsrad_bdyzone Width in number of grid for boundary zone
+!                 Note that WRF boundary zone is usually 5 grid points.
+!                 It will be 7 when mapping to the ARPS grid.
+!
+! qback_factor    Factor of the background error, which is set to be the
+!                 radar observation quality at the outest boundary. All
+!                 other observation error within the boundary zone will
+!                 be reduced gradually to the original data source specified
+!                 in &adas_radar.
+!
+! vrob_opt   Switch for using radial winds in each pass of analysis
+!                 = 0  Do not use radial winds
+!                 = 1  Use radial winds
+!
+!---------------------------------------------------------------------=*
+
+ &var_const
+   maxin=15,35,20,12,
+
+   qobsrad_bdyopt  = 12,
+     qobsrad_bdyzone = 7,7,7,7,
+     qback_factor    = 2.0,
+
+   cldfirst_opt = 0,0,0,1,
+   idealCase_opt= 0,
+
+   vrob_opt     = 0,1,0,0,
+   sglob_opt    = 0,
+   hydro_opt    = 1,
+   pseudo_qs    = 0,0,0,0,
+   pseudo_qv    = 0,0,0,1,
+   pseudo_pt    = 0,0,0,1,
+ /
+
+*----------------------------------------------------------------------
+!
+! 3DVAR Parameters (Dimensioned by parameter npass)
+!
+! ipass_filt : number of pass of recursive filter
+! filt_type  : parameters for recursive filter
+!            = 1, use high-order istropic recursive filter
+!            = 2, use low-order recursive filter
+! hradius    : horizontal influence radius in (km)
+! vradius_opt:   1: vertical influence radius in grid points;
+!                2: vertical influence radius in unit of km.
+! vradius: vertical influence radius
+! MAKE SURE # hradius=# vradus=# ipass_filt otherwise get error
+!---------------------------------------------------------------------=*
+
+ &var_refil
+   ipass_filt = 4,4,4,4
+   hradius    = 230.0,24.0,24.0,3.0,
+   vradius_opt = 1,1,1,1,
+   vradius  = 1.0,3.0,3.0,2.0,
+   filt_type = 2,
+ /
+
+!----------------------------------------------------------------------
+!
+!  chk_opt= 1    : check gradient
+!  assim_opt= 1  : do analysis
+!  cntl_var_rh = : 1= RH and 0=q
+!
+!----------------------------------------------------------------------
+
+ &var_exprt
+    chk_opt = 0,
+    assim_opt= 1,
+    cntl_var_rh = 0,
+ /
+
+*----------------------------------------------------------------------
+!
+!  ref_opt:   to assimilate reflectivity variationally
+!  intvl_T:   temperature threshold in unit of Celsius:
+!      if T<=intvl_T, the hydrometeor is in ice phase
+!      if T>=intvl_T, the hydrometeor is rain water
+!      in between, use linear interpolation to determin qs/qh and qr
+!  bkgerr_qr, bkgerr_qs, bkgerr_qh:
+!        background error in g/kg for qr, qs and qh
+!  wgt_ref:  weight coefficient, large value means large impact
+!  hradius_ref, vradius_opt_ref, vradius_ref
+!     similar as hradius,vradius_opt,vradius, but applied to qr/qs/qh
+!
+! NOTE:
+!  At present, reflecitivty assimilation only works on model run
+!  using LIN microphysic scheme
+!
+! 1. Only when ref_opt ==1 and wgt_ref(i) > 0, reflectivity will be assimilated
+! 2. A different influence radius will be used for control variable qr, qs, qh
+! 3. thresh_ref: only ref_observation > thresh_ref  will be assimilated when
+!                the radar data is in grid-grid format
+!   Details can ben found at GAO and Stensurd, 2012, JAS.
+! MAKE SURE # hradius=# vradus=# ref_opt otherwise get error
+!
+!---------------------------------------------------------------------=*
+
+ &var_reflec
+   ref_opt    = 0,0,1,0,
+   pq_opt     = 0,
+   intvl_T    = 10.0,
+   thresh_ref = 15.0,  !dBz
+   bkgerr_qr  = 1.0E-4,
+   bkgerr_qs  = 1.0E-4,
+   bkgerr_qh  = 1.0E-4,
+   wgt_ref    = 0.01,0.01,0.01,0.01,
+
+   hradius_ref = 8.0,8.0,8.0,8.0,
+   vradius_opt_ref = 1,1,1,1,
+   vradius_ref = 2,2,2,2,
+ /
+
+&var_oneobs
+/
+
+!----------------------------------------------------------------------
+!
+! div_opt : divergence term
+! use_arps_metrics : Whether to use old ARPS divergence equation,
+!                    use with the WRF model only
+!                   = .False., use WRF divergence equation for the WRF model
+!                   = .True.,  use original ARPS divergence equation
+! wgt_div_h  : coefficient of horizontal divergent term (npass)
+! wgt_div_v  : coefficient of vertical divergent term (npass)
+!
+!----------------------------------------------------------------------
+
+ &var_diverge
+   div_opt = 0,
+   use_arps_metrics = .FALSE.,
+   wgt_div_h(1)=5E-3,wgt_div_h(2)=5E-4,wgt_div_h(3)=5E-4,wgt_div_h(4)=5E-4,
+   wgt_div_v(1)=5E-3,wgt_div_v(2)=5E-4,wgt_div_v(3)=5E-4,wgt_div_v(4)=5E-4,
+ /
+
+ &var_thermo
+   thermo_opt = 0,
+   wgt_thermo(1)=0.50,
+   wgt_thermo(2)=0.20,
+   wgt_thermo(3)=0.10,
+   wgt_thermo(4)=0.10,
+ /
+
+ &var_smth
+   smth_opt = 0,
+   wgt_smth(1)=0.05,wgt_smth(2)=0.01,wgt_smth(3)=0.01,wgt_smth(4)=0.01,
+ /
+
+ &var_mslp
+   mslp_opt = 0
+   mslp_lat = 0.0
+   mslp_lon = 0.0
+   mslp_obs = 0.0
+   mslp_err = 0.0, 0.0, 0.0, 0.0,
+ /
+
+ &var_consdiv
+   dpec_opt = 0,
+   wgt_dpec = 0.0, 0.0,0.0,0.0,
+
+   hBal_opt = 0,
+   wgt_hBal = 0.0, 0.0,0.0,0.0,
+ /
+
+!
+!----------------------------------------------------------------------
+!
+! var_lightning
+!
+! nlgtfil        Number of lighting data file
+!                = 0, do not use lightning data assimilation
+!                > 0, lightning_files must contain the same number of
+!                     lightning data files
+! srclgt        Character arrays dimensioned by nlgtfil. Specify the
+!               lightning data source corresponding to each file in
+!               "lightning_files"
+! iuselgt       Whether to use each lightning data file in each pass
+!               First dimension size is "nlgtfil", second dimension
+!               size is "npass"
+!
+!----------------------------------------------------------------------
+
+ &var_lightning
+   nlgtfil = 0,
+   lightning_files = 'xxxx',
+   srclgt(1)='GLM',
+   iuselgt(1,1)=0,iuselgt(1,2)=0,iuselgt(1,3)=0,iuselgt(1,4)=1,
+   srclgt(2)='ENTLN',
+   iuselgt(2,1)=0,iuselgt(2,2)=0,iuselgt(2,3)=0,iuselgt(2,4)=0,
+   lightning_output = 0,
+ /
+
+!----------------------------------------------------------------------
+!
+! This module handle assimilation of the thermodynamic profiles from
+! Atmospheric Emitted Radiance Interferometer (AERI) downwelling
+! spectral radiance observations.
+!
+! AERI is a ground-based instrument that measures the downwelling
+! infrared radiance from the Earths atmosphere. The observations
+! have broad spectral content and sufficient spectral resolution to
+! discriminate among gaseous emitters (e.g., carbon dioxide and
+! water vapor) and suspended matter (e.g., aerosols, water droplets,
+! and ice crystals). These upward-looking surface observations can
+! be used to obtain vertical profiles of tropospheric temperature
+! and water vapor, as well as measurements of trace gases (e.g.,
+! ozone, carbon monoxide, and methane) and downwelling infrared
+! spectral signatures of clouds and aerosols.
+!
+!----------------------------------------------------------------------
+
+ &var_aeri
+   aeri_opt  = 0,
+   aeri_file = '/scratch/junjun.hu/AERIBUFR/aeribufr',
+   iuseaeri  = 0,1,1,1,
+ /
+!
+!----------------------------------------------------------------------
+!
+! var_ens
+!
+! iensmbl      My Ensemble ID, from 1 to nensmbl
+! icyle        No. of cycle, starting from 1
+!
+! enstimeopt   = 1, use initime
+!              = 2, require ensintdate(10) & ensinttime(8)
+! ensfileopt   = 1, WRF input file, wrfinput_d01
+!              = 2, WRF output file, wrfout_d01_YYYY-mm-dd_HH:MM:SS
+!              = 3, WoF specific input file, wrfinput_d01_ic
+!              = 4, WoF specific forecast file, wrffcst_d01_YYYY-mm-dd_HH:MM:SS
+! ensreadopt   = 1, All processes read and process variable by variable and then
+!                   by member (default, use less memory)
+!              = 2, Read all members and then do processing (may use more memory)
+!              = 3, Read all members in parallel by multiple processes (= number of members)
+!                   and then broadcast for processing member by member (use more memgory)
+!      NOTE: option 1 is more flexible by allowing read and split/join possibility
+!            option 2/3 can only read one joined WRF file for each member at each forecast time
+!
+! interpopt    = 1, Do interpolation from ensemble grid to analysis grid on-line (slower)
+!              = 2, Do the interpolation beforehand (more memory)
+! cov_factor   Ensemble covariance factor: 1.0=full flow dependent and 0.0=static B matrix
+!
+! ref_enctrl:  Wheter to use reflectivity as a control variable, it will
+!              be use together with "ref_opt". Still NOT implemented currently.
+!
+! hradius_ens=0.5*(hradius+hradius_ref) since using hradius_ref_ens would be too costly bcs of code structure.
+! same for vradius
+! MAKE SURE # hradius=# vradus=# vradius_opt  otherwise get error
+! ntimesample  Number of time sample for each ensemble member
+!              = 1 (Default), normal ensemble member
+!              = 3, Each ensemble member will provide 3 time samples to expand the
+!                   ensemble spread and the time interval of those sample will be
+!                   determined with parameter "stimesample".
+!
+! stimesample  Time interval in seconds when ntimesample > 1.
+!              = 120
+!
+!----------------------------------------------------------------------
+!
+ &var_ens
+  nensmbl     = 36, ntimesample = 1, stimesample = 120
+  iensmbl     = 0,
+  icycle      = 0,
+
+  ensdirname  = './ensModelOut',
+  ensfileopt  = 1,
+  enstimeopt  = 1,
+  ensreadopt  = 3, ensreadready = 1,
+  interpopt   = 2,
+
+  cov_factor   = 0.0,
+  kgain_factor = 0.0,
+  hradius_ens  = 230.0, 24.0, 8.0, 3.0,
+  vradius_opt_ens = 1,1,1,1,1,
+  vradius_ens     = 1.0, 3.0, 2.0, 2.0,
+ /
+
+!-----------------------------------------------------------------------
+!
+! End of input file
+!
+!-----------------------------------------------------------------------

@@ -1,0 +1,47 @@
+ &SETUP
+   miter=0,niter(1)=0,niter(2)=0
+   write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
+   gencode=78,qoption=2, lread_obs_save=.true.,
+   factqmin=0.0,factqmax=0.0,deltim=1200,
+   ntilt_radarfiles=1,iguess=-1,
+   retrieval=.false.,
+   nhr_assimilation=3,l_foto=.false.,offtime_data=.true.,
+   use_prepb_satwnd=.true.,
+   nhr_obsbin=5, !hardcoded for +/- 1 and 2 'minutes'
+   use_pbl=.false.,use_compress=.false.,nsig_ext=13,gpstop=30.,
+   if_vterminal=.true., if_cv_w=.true., if_cv_dbz=.true.,
+   static_gsi_nopcp_dbz=0,rmesh_dbz=4.0,rmesh_vr=4.0,zmesh_dbz=1000.0,zmesh_vr=1000.0,
+   missing_to_nopcp=.true.,
+   newpc4pred=.true.,adp_anglebc=.true.,angord=4, passive_bc=.false.,use_edges=.false.,
+   emiss_bc=.false., diag_precon=.false.,
+ /
+ &GRIDOPTS
+   JCAP=62,JCAP_B=62,NLAT=300,NLON=300,nsig=50,
+   wrf_nmm_regional=.false.,wrf_mass_regional=.true.,
+   diagnostic_reg=.false.,regional=.true.,
+   filled_grid=.false.,half_grid=.true.,netcdf=.true.,
+ /
+ &BKGERR
+   vs=1.0,
+   hzscl=0.373,0.746,1.50,
+   bw=0.,fstat=.true.,
+ /
+ &ANBKGERR
+   anisotropic=.false.,an_vs=1.0,ngauss=1,
+   an_flen_u=-5.,an_flen_t=3.,an_flen_z=-200.,
+   ifilt_ord=2,npass=3,normal=-200,grid_ratio=4.,nord_f2a=4,
+ /
+ &JCOPTS
+ /
+ &STRONGOPTS
+   nstrong=0,nvmodes_keep=20,period_max=3.,
+   baldiag_full=.true.,baldiag_inc=.true.,
+ /
+ &OBSQC
+   dfact=0.75,dfact1=3.0,noiqc=.false.,c_varqc=0.02,vadfile='prepbufr',
+ /
+ &OBS_INPUT
+   dmesh(1)=120.0,dmesh(2)=60.0,dmesh(3)=60.0,dmesh(4)=60.0,dmesh(5)=120,time_window_max=0.45,
+/
+OBS_INPUT::
+!   dfile          dtype       dplat       dsis       dval     dthin   dsfcalc   time_window

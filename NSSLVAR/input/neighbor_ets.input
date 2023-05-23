@@ -1,0 +1,140 @@
+!
+!   ##################################################################
+!   ##################################################################
+!   ######                                                      ######
+!   ######         INPUT FILE FOR PROGRAM FSS                   ######
+!   ######                                                      ######
+!   ######                     Developed by                     ######
+!   ######       National Severe Storm Laboratory, NOAA         ######
+!   ######                                                      ######
+!   ##################################################################
+!   ##################################################################
+!
+*-----------------------------------------------------------------------
+!
+!  This file contains run-time parameters for program FSS which
+!  compute FSS scores.
+!
+!                                                                    =*
+*-----------------------------------------------------------------------
+!
+! Author: Yunheng Wang (05/24/2018)
+!    Based on Alex's Ferrio's Fortran program.
+!
+! Modification history:
+!
+!                                                                    =*
+*-----------------------------------------------------------------------
+!
+!  Message passing namelist
+!
+!  nproc_x     : processor number in X direction
+!  nproc_y     : processor number in Y direction
+!
+!  nproc_x_in    Number of input patches in x-direction
+!  nproc_y_in    Number of input patches in y-direction
+!
+!         NOTE: Must be either 1 or nproc_x/nproc_y at present
+!
+!---------------------------------------------------------------------=*
+&message_passing
+  nproc_x = 4,
+  nproc_y = 6,
+/
+*-----------------------------------------------------------------------
+!
+! INPUT_FILE
+!
+!  ntime:       Number of files to be processed
+!  fcst_files:  WRF forecast files
+!  obs_files :  Observations files (NEWSVAR analysis output)
+!  obsfmt    :  Observation file format
+!              = 1, NEWS3DVAR analysis file, contains 3D MRMS reflectivity
+!                   that was interpolated to the model grid
+!              = 2, NEWS3DVAR special output file, contains only 3D MRMS
+!                   reflectivity
+!              = 202, NEWS3DVAR special output file, contains only 2D
+!                     MRMS composite reflectivity
+!
+!---------------------------------------------------------------------=*
+
+&input_files
+
+   ntime = 13,
+
+   fcst_files(1) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_21:00:00',
+   fcst_files(2) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_21:15:00',
+   fcst_files(3) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_21:30:00',
+   fcst_files(4) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_21:45:00',
+   fcst_files(5) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_22:00:00',
+   fcst_files(6) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_22:15:00',
+   fcst_files(7) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_22:30:00',
+   fcst_files(8) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_22:45:00',
+   fcst_files(9) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_23:00:00',
+   fcst_files(10) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_23:15:00',
+   fcst_files(11) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_23:30:00',
+   fcst_files(12) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-23_23:45:00',
+   fcst_files(13) = '/scratch/ywang/real_runs/20180523/2100Z/dom20/wrf5/wrfout_d01_2018-05-24_00:00:00',\
+
+   obsfmt        = 1,
+   obs_files(1)  = '/scratch/ywang/real_runs/20180523/2100Z/dom20/news3dvar/wrfout_d01_2018-05-23_21:00:00',
+   obs_files(2)  = '/scratch/ywang/real_runs/20180523/2115Z/dom20/news3dvar/wrfout_d01_2018-05-23_21:15:00',
+   obs_files(3)  = '/scratch/ywang/real_runs/20180523/2130Z/dom20/news3dvar/wrfout_d01_2018-05-23_21:30:00',
+   obs_files(4)  = '/scratch/ywang/real_runs/20180523/2145Z/dom20/news3dvar/wrfout_d01_2018-05-23_21:45:00',
+   obs_files(5)  = '/scratch/ywang/real_runs/20180523/2200Z/dom20/news3dvar/wrfout_d01_2018-05-23_22:00:00',
+   obs_files(6)  = '/scratch/ywang/real_runs/20180523/2215Z/dom20/news3dvar/wrfout_d01_2018-05-23_22:15:00',
+   obs_files(7)  = '/scratch/ywang/real_runs/20180523/2230Z/dom20/news3dvar/wrfout_d01_2018-05-23_22:30:00',
+   obs_files(8)  = '/scratch/ywang/real_runs/20180523/2245Z/dom20/news3dvar/wrfout_d01_2018-05-23_22:45:00',
+   obs_files(9)  = '/scratch/ywang/real_runs/20180523/2300Z/dom20/news3dvar/wrfout_d01_2018-05-23_23:00:00',
+   obs_files(10) = '/scratch/ywang/real_runs/20180523/2315Z/dom20/news3dvar/wrfout_d01_2018-05-23_23:15:00',
+   obs_files(11) = '/scratch/ywang/real_runs/20180523/2330Z/dom20/news3dvar/wrfout_d01_2018-05-23_23:30:00',
+   obs_files(12) = '/scratch/ywang/real_runs/20180523/2345Z/dom20/news3dvar/wrfout_d01_2018-05-23_23:45:00',
+   obs_files(13) = '/scratch/ywang/real_runs/20180523/0000Z/dom20/news3dvar/wrfout_d01_2018-05-24_00:00:00',
+/
+
+*-----------------------------------------------------------------------
+!
+! VERIF_PARMS
+!
+! vfield : Verification field
+!         = 1, Composite reflectivity (REFL_10CM/REFMOSAIC3D)
+!         = 2, Hourly precipitation (RAINNC/)
+! radius: in km
+! vradius: in grid points
+!
+!---------------------------------------------------------------------=*
+
+&verif_parms
+
+  vfield = 1
+
+  nradius = 9,
+  radius(1)=1.0 , vradius(1) = 1,
+  radius(2)=4.0 , vradius(2) = 1,
+  radius(3)=8.0 , vradius(3) = 1,
+  radius(4)=12.0, vradius(4) = 1,
+  radius(5)=16.0, vradius(5) = 1,
+  radius(6)=20.0, vradius(6) = 1,
+  radius(7)=24.0, vradius(7) = 1,
+  radius(8)=32.0, vradius(8) = 1,
+  radius(9)=40.0, vradius(9) = 1,
+
+  nthres = 3
+  thres(1)=20.0
+  thres(2)=30.0
+  thres(3)=40.0
+/
+
+*-----------------------------------------------------------------------
+!
+! OUTPUT
+!
+!  outfile: output file name
+!
+!---------------------------------------------------------------------=*
+
+&output
+
+  outfile(1) = './ets_20180523_0200.txt'
+  outfile(2) = './bias_20180523_0200.txt'
+ /

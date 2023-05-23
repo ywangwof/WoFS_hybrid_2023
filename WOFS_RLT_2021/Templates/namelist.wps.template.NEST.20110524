@@ -1,0 +1,31 @@
+
+&geogrid
+ parent_id         =   1,  1,
+ parent_grid_ratio =   1,  5,
+ i_parent_start    =   1,  125,
+ j_parent_start    =   1,  55,
+ e_we              =  331, 331,
+ e_sn              =  331, 331,
+ geog_data_res     = 'modis_lakes+30s', 'modis_lakes+30s', 
+ dx = 3000,
+ dy = 3000,
+ map_proj = 'lambert',
+ ref_lat   =  35.53527,
+ ref_lon   = -99.26868,
+ truelat1  =  30.00,
+ truelat2  =  60.00,
+ stand_lon = -98.00,
+ geog_data_path = '/wof/wof/software/opt/local/WRF_DART/geog'
+ opt_geogrid_tbl_path = '/wof/wof/software/templates'
+/
+
+&ungrib
+ out_format = 'WPS',
+ prefix = 'FILE',
+/
+
+&metgrid
+ fg_name = 'FILE'
+ io_form_metgrid = 2,
+ opt_metgrid_tbl_path = '/wof/wof/software/templates'
+/

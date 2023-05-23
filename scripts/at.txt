@@ -1,0 +1,15 @@
+SHELL=/bin/bash
+
+PATH=/opt/slurm/19.05.3/bin:/bin:/usr/bin
+LD_LIBRARY_PATH=/opt/gcc/10.2.0/snos/lib64:/opt/cray/pe/papi/6.0.0.6/lib64:/opt/intel/compilers_and_libraries_2020.4.304/linux/compiler/lib/intel64_lin:/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi/intel64/lib/release:/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi/intel64/lib:/opt/intel/compilers_and_libraries_2020.4.304/linux/ipp/lib/intel64:/opt/intel/compilers_and_libraries_2020.4.304/linux/mkl/lib/intel64_lin:/opt/intel/compilers_and_libraries_2020.4.304/linux/tbb/lib/intel64/gcc4.8:/opt/intel/debugger_2020/python/intel64/lib:/opt/intel/debugger_2020/libipt/intel64/lib:/opt/intel/compilers_and_libraries_2020.4.304/linux/daal/lib/intel64_lin
+NCARG_ROOT=/scratch/software/NCL/default
+PYTHONHOME=/usr
+PYTHONPATH=/usr/lib64/python3.6/site-packages
+
+#TZ=America/Chicago
+
+scpath=/oldscratch/ywang/NEWSVAR/news3dvar.2021/scripts
+rundir=/scratch/ywang/real_runs
+
+10 06          12 * * $scpath/runhr-inone -c config22_hyb.yaml 20220504 >> $rundir/20220504.log 2>&1
+

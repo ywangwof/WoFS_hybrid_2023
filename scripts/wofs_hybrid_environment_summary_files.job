@@ -1,0 +1,105 @@
+#!/bin/bash
+#==================================================================
+#SBATCH -J JOBNAME
+#SBATCH -o LOGDIR/JOBNAME.out
+#SBATCH -e LOGDIR/JOBNAME.err
+#SBATCH -A smallqueue
+#SBATCH -p workq
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=24
+#SBATCH -t 01:30:00
+
+
+#####################################################
+# THIS BATCH SCRIPT GENERATES THE ENS SUMMARY FILES
+# FOR A SERIES OF INITIALIZATION TIMES
+#####################################################
+
+source /home/brian.matilla/miniconda3/etc/profile.d/conda.sh
+conda activate wofs_post
+
+#$SLURM_SUBMIT_DIR
+
+MALLOC_MMAP_MAX=0
+MALLOC_TRIM_THRESHOLD=536870912
+
+variables_to_save="environment_vars"
+variables_at_different_plevels="variables_at_different_plevels"
+
+config() {
+    python3 -c "import yaml;print(yaml.safe_load(open('$1'))$2)"
+}
+
+confl="/oldscratch/ywang/NEWSVAR/news3dvar.2021/scripts/wofs_hybrid_config.yaml"
+
+file_start=$(config $confl "['file_start']")
+script_base=$(config $confl "['scriptdir']")
+fcstroot=$(config $confl "['fcstroot']")
+date=$(config $confl "['eventdate']")
+flagdir_base=$(config $confl "['flagdir']")
+declare -a starttimes=($(config $confl "['starttimes']" | tr -d "['],"))
+summary_file_base_path=$(config $confl "['summarydir']")
+declare -a fcstlength=($(config $confl "['fcstlength']" | tr -d '[],'))
+runtype=$(config $confl "['run_type']")
+n_processors=$(config $confl "['n_procs_post_env']")
+
+# Build directories needed:
+
+summary_file_date_path="$summary_file_base_path/$date/"
+wrf_date_path="$fcstroot/$date/"
+flagdir="$flagdir_base$date/"
+script_path="${script_base}/scripts/post/"
+
+cd ${script_path}
+
+if [[ ! -d $flagdir ]]; then
+  mkdir -p $flagdir
+fi
+
+# Run the python script:
+
+sleep 1
+
+# Iterate over the initialization times (starttimes)
+
+tag="_env_hyb.txt"
+for index in ${!starttimes[*]}; do
+    time_dir=${starttimes[$index]}
+    time_dir_wrf=`printf ${time_dir} | grep -o -E '[0-9]+'`
+    nt=${fcstlength[$index]}
+    summary_file_path="$summary_file_date_path/${time_dir_wrf}Z/"
+    wrf_path="$wrf_date_path/${time_dir_wrf}Z/dom20/wrf5/"
+    flagfile="$flagdir/${time_dir_wrf}Z$tag"
+
+    echo "Number of time step: $nt"
+    echo "Summary path file: $summary_file_path"
+    echo "WRFOUT file path: $wrf_path"
+
+    # Check
+    if [[ ! -d $summary_file_path ]]
+    then
+      mkdir -p $summary_file_path
+    fi
+
+    #tempfiles=`ls -a ${wrf_path} | wc | awk '{print $1}'`
+    #tempfiles_fl=`ls -a ${wrf_path}`
+
+#    echo ${tempfiles}
+#    echo ${tempfiles_fl}
+
+    echo $nt
+
+    #if [ ${tempfiles} -gt 2 ]; then
+    #    echo "${tempfiles} is gt 2"
+    if compgen -G "${wrf_path}/wrfoutReady_d01_*" > /dev/null; then
+        if [[ ! -f $flagfile ]]
+        then
+            echo "$flagfile did not exist. Creating it now..."
+            touch $flagfile
+            python ${script_path}make_summary_file_mp.py -i $wrf_path -o $summary_file_path --nt $nt -d $variables_at_different_plevels -c $confl -v $variables_to_save -n $n_processors -f $file_start --runtype $runtype
+	    #exit 0
+	fi
+    fi
+done
+
+sleep 10

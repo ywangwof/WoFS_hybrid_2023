@@ -1,0 +1,40 @@
+SHELL=/bin/bash
+
+PATH=/home/yunheng.wang/tools/anaconda2/envs/py2/bin:/bin:/usr/bin
+
+scpath=/oldscratch/ywang/NEWSVAR/news3dvar.2021/scripts
+rundir=/work/ywang/saved_data
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * command to be executed
+
+# use CDT on wof-post2
+
+########################################################################
+###                  Download HRRR                                   ###
+########################################################################
+#20  8-23        * * * $scpath/download_HRRR.py >> $rundir/HRRR/download_HRRR.log 2>&1
+#20  0,1         * * * $scpath/download_HRRR.py >> $rundir/HRRR/download_HRRR.log 2>&1
+
+########################################################################
+###                  Process GLM                                     ###
+########################################################################
+01  10-22        * * * $scpath/glm_15min_10win.sh >> $rundir/GOES16/GLM/download_GLM.log 2>&1
+16  10-21        * * * $scpath/glm_15min_10win.sh >> $rundir/GOES16/GLM/download_GLM.log 2>&1
+31  10-21        * * * $scpath/glm_15min_10win.sh >> $rundir/GOES16/GLM/download_GLM.log 2>&1
+46  10-21        * * * $scpath/glm_15min_10win.sh >> $rundir/GOES16/GLM/download_GLM.log 2>&1
+
+
+########################################################################
+###                  Transfer Radar to Odin                          ###
+########################################################################
+03  10-22        * * * $scpath/syncradar.sh >> $rundir/NEXRAD2/download_radar.log 2>&1
+18  10-22        * * * $scpath/syncradar.sh >> $rundir/NEXRAD2/download_radar.log 2>&1
+33  10-21        * * * $scpath/syncradar.sh >> $rundir/NEXRAD2/download_radar.log 2>&1
+48  10-21        * * * $scpath/syncradar.sh >> $rundir/NEXRAD2/download_radar.log 2>&1

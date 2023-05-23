@@ -1,0 +1,4 @@
+copy from /home/wofuser/WOFS/WOFS-GSI/util/Analysis_Utilities/read_diag/
+/home/wofuser/WOFS/WOFS-GSI/dtc/configure.gsi
+/home/wofuser/WOFS/WOFS-GSI/dtc/include
+/home/wofuser/WOFS/WOFS-GSI/src/libgsi.a

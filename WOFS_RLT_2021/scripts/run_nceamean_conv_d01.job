@@ -1,0 +1,29 @@
+#!/bin/csh 
+#======================================================
+#SBATCH -J NCEA_MEAN_WRFOUT
+#SBATCH -o nceamean01_sm.o%j
+#SBATCH -e nceamean01_sm.err
+#SBATCH -p batch
+#SBATCH --ntasks-per-node=1
+#SBATCH -n 1
+#SBATCH -t 0:10:00 
+#======================================================
+
+echo "BEGIN NCEA_MEAN"
+date
+
+export PATH=./:/bin:/scratch/software/intel/netcdf/bin:/scratch/software/miniconda3/bin:$PATH
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/scratch/software/intel/netcdf/lib:/scratch/software/intel/hdf5/lib:/scratch/software/intel/grib2/libpng/lib:/scratch/software/intel/grib2/zlib/lib:/scratch/software/miniconda3/lib:/usr/lib64
+
+cp -pvf wrfinput_d01.1 wrfinput_d01.ensmean
+foreach var ( MU REFL_10CM )
+     set tensout = temp_${var}_mean
+     ncea -v ${var} wrfinput_d01*    ${tensout}
+     ncks -A temp_${var}_mean wrfinput_d01.ensmean
+end
+
+rm -rf temp_*
+echo "END ENS_MEAN"
+touch ensmean_done01
+date
+exit 0

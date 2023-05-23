@@ -1,0 +1,7 @@
+This directory contains the following programs built from the package - NEWS3DVAR
+
+news3dvar  news3dvar_mpi  
+radremap   radremap_mpi  
+tinterp    tinterp_mpi  
+wrfhybrid  wrfhybrid_mpi
+wrfdaupdate  

@@ -1,0 +1,2 @@
+
+/scratch/software/Odin/python/anaconda2/bin/ncks -A -v XLAT,XLONG input_file output_file

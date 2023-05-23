@@ -1,0 +1,119 @@
+Initial copied from /home/wof/WOFS/run_scripts/WOFS_RLT_2021 on 06-02-2022.
+
+Observations from /work/rt_obs/
+
+Setup_WOFS_Grid.csh
+    Setup_WOFS_RLT.csh  Create realtime.cfg.${event}, WRF_RUN, GSI_RUN
+    Gen_WINPTS.csh      Create namelist.wps, geogrid.csh,
+
+CREATE_WOFS_12BCs.csh
+    Run_WPS_12BCs1.csh  run geogrid, ungrib, metgrid for all HRRRE members
+    Run_BCs1.csh        run real for sdate1_12 to edate1_12
+    Run_WPS_12BCs2.csh  for sdate2_12 to edate2_12
+    Run_BCs2.csh
+
+CREATE_WOFS_ICs.csh
+    Run_WPS_ICs.csh     run ungrib & metgrid
+    Run_ICs.csh         run real
+
+RUN_WOFS_RLT.csh
+    run_nceamean_conv_d01.job
+    run_grid_refl.job if grid_refl_obs_gsi
+    run_gsi_mem.job
+    run_diagmean.job
+    run_diagmean_rad.job
+    runenkf.job
+    adv_wrf_mem.job
+        runwrf_conv.csh
+        update_wrf_bc
+        wrf.exe
+    run_nceamean_conv_d01.job for next cycle
+
+RUN_FCST00_RLT.csh
+    update_wrf_bc
+    wrf.exe
+
+Notes:
+    1. cen_lat/cen_lon is defined in WOFS_grid_radar/radars.20210527.csh
+
+Initialization Steps:
+
+    1. Copy /home/wof/WOFS/run_scripts/WOFS_RLT_2021 to /scratch/ywang/EPIC2/WoFS2021/WOFS_RLT_2021
+    2. Copy /home/wof/WOFS/Templates                 to /scratch/ywang/EPIC2/WoFS2021/Templates
+    3. Copy ~wof/WOFenv_rlt_2021                     to /scratch/ywang/EPIC2/WoFS2021/WOFenv_rlt_2021
+       Change TOP_DIR from /scratch/wof/realtime to /scratch/ywang/EPIC2/expt_dirs
+    4. Inside Setup_WOFS_RLT.csh
+        TEMPLATE_DIR    /scratch/ywang/EPIC2/WoFS2021/Templates
+        PRIOR_INF       0
+    5. Templates/namelists.WOFS
+
+                            1/7/13/19/25/31  2/8/14/20/26/32  3/9/15/21/27/33  4/10/16/22/28/34  5/11/17/23/29/35  6/12/18/24/30/36   all members
+        ra_lw_physics       1                4                1                4                 1                 4                  4
+        ra_sw_physics       1                4                1                4                 1                 4                  4
+        sf_sfclay_physics   1                1                2                2                 5                 5                  5
+        bl_pbl_physics      1                1                2                2                 5                 5                  5
+        icloud_bl           1                1                1                1                 0                 0                  0
+        aer_opt             x                0                x                x                 x                 0                  0
+
+        ra_lw_physics (max_dom)      longwave radiation option
+                                     = 0, no longwave radiation
+                                     = 1, rrtm scheme
+                                       (Default values for GHG in V3.5: co2vmr=379.e-6, n2ovmr=319.e-9, ch4vmr=1774.e-9;
+                                        Values used in previous versions: co2vmr=330.e-6, n2ovmr=0., ch4vmr=0.)
+                                     = 3, cam scheme
+                                          also requires levsiz, paerlev, cam_abs_dim1/2 (see below)
+                                     = 4, rrtmg scheme
+                                       (Default values for GHG in V3.5: co2vmr=379.e-6, n2ovmr=319.e-9, ch4vmr=1774.e-9)
+
+        ra_sw_physics (max_dom)      shortwave radiation option
+                                     = 0, no shortwave radiation
+                                     = 1, Dudhia scheme
+                                     = 2, Goddard short wave
+                                     = 3, cam scheme
+                                          also must set levsiz, paerlev, cam_abs_dim1/2 (see below)
+                                     = 4, rrtmg scheme
+
+        sf_sfclay_physics (max_dom)  surface-layer option (old bl_sfclay_physics option)
+                                     = 0, no surface-layer
+                                     = 1, Revised MM5 Monin-Obukhov scheme (Jimenez, renamed in v3.6)
+                                     = 2, Monin-Obukhov (Janjic) scheme
+                                     = 3, NCEP Global Forecast System scheme (NMM only)
+                                     = 4, QNSE surface layer
+                                     = 5, MYNN surface layer
+
+        bl_pbl_physics (max_dom)    boundary-layer option
+                                     = 0, no boundary-layer
+                                     = 1, YSU scheme
+                                     = 2, Mellor-Yamada-Janjic TKE scheme
+                                     = 3, Hybrid EDMF GFS scheme (NMM only)
+                                     = 4, Eddy-diffusivity Mass Flux, Quasi-Normal Scale Elimination PBL
+                                     = 5, MYNN 2.5 level TKE scheme, works with
+                                          sf_sfclay_physics=1 or 2 as well as 5
+
+        icloud_bl                   option to couple the subgrid-scale clouds from the PBL scheme (MYNN only)
+                                     to radiation schemes
+                                     0: no coupling; 1: activate coupling to radiation (default)
+
+        aer_opt                     = aerosol input option for radiation (currently rrtmg only)
+                                     = 0, none
+                                     = 1, using Tegen (1997) data,
+                                     = 2, using J. A. Ruiz-Arias method (see other aer_* options)
+                                     = 3, using G. Thompson's water/ice friendly climatological aerosol
+
+
+    6. RUN_WOFS_RLT.csh, comment out
+        CWP
+        GOES-16 RADIANCE
+        set noise_flag = 0
+
+    7. Run_BCs1.csh, Run_BCs2.csh, Run_ICs.csh, runwrf_conv.csh and RUN_FCST00_RLT
+        ${TEMPLATE_DIR}/namelists.WOFS/namelist.input.member6 for all members
+
+Steps to run:
+
+    0. modify WOFS_RLT_2021 for event
+    1. Setup_WOFS_Grid.csh          Create realtime.cfg.${event} and WRFINPUTS
+    2. CREATE_WOFS_12BCs.csh        Create mem*
+    3. CREATE_WOFS_ICs.csh          Create ic*
+    4. RUN_WOFS_RLT.csh
+    5. RUN_FCST00_RLT

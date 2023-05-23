@@ -1,0 +1,513 @@
+!
+!     ##################################################################
+!     ##################################################################
+!     ######                                                      ######
+!     ######      INPUT FILE FOR ARPS RADAR REMAPPING PROGRAMS    ######
+!     ######                                                      ######
+!     ######                                                      ######
+!     ######                     Developed by                     ######
+!     ######     Center for Analysis and Prediction of Storms     ######
+!     ######                University of Oklahoma                ######
+!     ######                                                      ######
+!     ##################################################################
+!     ##################################################################
+!
+!-----------------------------------------------------------------------
+!
+!  This file contains the input parameters in the NAMELIST format.
+!  for ARPS version 5.2 radar remapping programs 88d2arps,
+!  nids2arps and ncrad2arps.
+!
+!  Note that only lines between &NAMELIST_NAME and / are read as the
+!  input data, and there must be a blank space in front of the '&' sign.
+!  Comments can be written between these data blocks except on machines
+!  such as the Cray VPP (see below).
+!
+!  We are using '!' in the first column of comment line only to distinguish
+!  them from the data statement. Certain compilers, include Cray F90, does
+!  not allow non-blank statements/comments between namelist blocks.
+!  They need to be stripped out first. A command to do so using sed is
+!  given near the end of makearps).
+!
+!-----------------------------------------------------------------------
+!
+! Author:
+!
+! Keith Brewster (12/28/2009)
+! Starting from arps.input of arps5.2.12
+!
+! Modification history:
+!
+!-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+!
+!  MESSAGE_PASSING  Namelist for message passing version of the ARPS.
+!                   These values are ignored for the non-MP version.
+!
+!  nproc_x      Number of processors in the x-direction.
+!  nproc_y      Number of processors in the y-direction.
+!               Note that if (nx-3)/nproc_x or (ny-3)/nproc_y are not
+!               integers, ny & ny will be increased so that they are.
+!
+!  max_fopen    Maximum number of files allowed open when reading or
+!               writing, a number smaller than the number of processors
+!               can be used if dictated by the computing platform.
+!               However, the system will set max_fopen = number of
+!               processors automatically when needing to read in a sounding
+!               file for initopt=1.
+!
+!-----------------------------------------------------------------------
+
+ &message_passing
+  nproc_x=4,
+  nproc_y=4,
+
+   max_fopen = 16,
+
+   nprocx_in = 1,
+   nprocy_in = 1,
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Initialization Block
+!
+!  This block is the same as arps.input but some unused variables
+!  are not included in this input file.
+!
+!  Note, for the radar remapper, initopt=1 and 3 are supported.
+!  These are used to get background information for wind quality
+!  control and radar ray path calculations.
+!
+!  initime = 'yyyy-mm-dd.hr:mn:se', UTC(GMT) date/time. yyyy is a
+!                                   4-digit integer for year, and mm, dd,
+!                                   hr, mn, and se are 2-digit integers
+!                                   for month, day, hour, minute, and
+!                                   second, respectively. For example,
+!                                   20:30Z, Dec. 19, 1994 would be
+!                                   represented as: 1994-12-19.20:30:00
+!
+!  initopt   Model initialization option.
+!          = 1, initialize using a sounding
+!          = 3, initialize from an external data set. See inifmt below
+!               for available history data formats.
+!
+!  timeopt   Options to check the consistency of user specified time
+!            (initime and tstart) with the time of history data which is
+!            used to start up ARPS (initopt=3)
+!          = 1, warning on inconsistence and continue using initime and tstart
+!          = 2, warning on inconsistence and continue using data time
+!          = else, warning on inconsistence and stop, default
+!
+!  sndfile  Name of the sounding file.
+!
+!  inifmt   Data format of external data files (inifile, inigbf)
+!           for initopt = 3.
+!          = 1,  unformatted binary data;
+!          = 3,  NCSA HDF format data;
+!          = 7,  NetCDF format;
+!          = 8,  Packed NetCDF format;
+!          = 10, GRIB format
+!
+!  inisplited Flag to indicate whether the external data file (inifile,
+!             inigbf, exbcname, terndta, sfcdtfl, soilinfl, rstinf etc.)
+!             is in a single joined file or in multiple files which were
+!             created using splitfiles. Valid for MPI mode and initopt = 3.
+!          = 0, external data file in a single file. the program will
+!               split the data on-the-fly. The splitfiles step is not
+!               needed before running ARPS_MP code.
+!          = 1, external files have been split-up for each processor
+!               by running program splitfiles in advance.
+!          = 3, same as 1, except use non-split terrain and surface files
+!               instead of the split versions that 1 requires.
+!
+!    NOTE: See the restriction for "max_fopen" flag when inisplited = 0.
+!          Split-on-the-fly only works with binary and HDF format.
+!
+!  inifile  Name of external data history file for initopt = 3 and 4.
+!  inigbf   Name of base-state/grid file for initopt = 3 and 4.
+!
+!-----------------------------------------------------------------------
+
+ &initialization
+   modelopt = 2,
+   initime = '2009-06-11.23:30:00',
+   initopt = 3,
+   timeopt = 0,
+
+   inifmt   = 3,
+   inisplited = 0,
+   inifile  = './int_dat/wrfinput_d01',
+   inigbf   = './int_dat/int200906112330.hdfgrdbas',
+
+   sndfile = 'may20.snd',
+ /
+
+!-----------------------------------------------------------------------
+!
+!  Radar remapping options
+!
+!  radname:    4-Character radar ID
+!
+!  radband:    Radar Transmit Band
+!              1: S-Band (10 cm)   US NEXRAD is S-band
+!              2: C-Band ( 5 cm)
+!              3: X-Band ( 3 cm)
+!
+!  radfname used for 88d2arps; list files are used for ncrad2arps and nids2arps
+!  radfname:   Full pathname/filename for NEXRAD radar data file (88d2arps)
+!  nlistfil    Number of files containing lists of radar files for processing
+!              Maximum number of list files = 10
+!  listfil(1)  Full pathnames of list files
+!  listfil(2)
+!  ref_time    Final output time after the time interpolation between listfil(1)
+!              and listfil(2)
+!
+!  rad98opt:   For 88d2arps: WSR-98D (China) radar format
+!               0: File is not WSR-98D Format
+!               1: File is a WSR-98D radar data file
+!
+!  refvarname    : Name for Reflectivity variable in data file
+!  velvarname    : Name for Radial Velocity variable in data file
+!  spwvarname    : Name for Spectrum Width variable in data file
+!  snrvarname    : Name for SNR variable in data file
+!  rhvvarname    : Name for RhoHV Correlation variable in data file
+!  zvvvarname    : Name for Zvv variable in data file
+!  zdpvarname    : Name for Zdp variable in data file
+!  zdrvarname    : Name for Zdr variable in data file
+!  kdpvarname    : Name for Kdp variable in data file
+!
+!  tradopt:    Read all background data in the tradiational way (initgrdvar)
+!               0: Use the more efficient direct reading of needed arrays
+!               1: For testing, using the old method.
+!  velprocopt: Velocity data processing option
+!               0: Do not process velocity, reflectivity only
+!               1: Process the radial velocity data
+!  clrvcpopt:  In the case of clear-air VCP  (VCP 31 and VCP 32)
+!               0: Do not process the data, exit immediately
+!               1: Process reflectivity data only for clear VCPs
+!               2: Process all data for clear-air VCPs
+!  qcopt:      Quality Control Option
+!               0: Do not apply quality control to raw data
+!               1: Apply automated quality control to raw data
+!  xu_dealiase Whether to apply Xu's velocity dealising processing
+!               0:
+!               1:
+!  xu_modelopt  Whether to use background grid wind fields
+!               0: Do not use gridded winds
+!               1: Use original RUC pressure datasets
+!               2: Use WRF/ARPS background wind fields
+!  gclopt:     Ground Clutter QC Option
+!               0: Do not apply ground clutter checking
+!               1: Apply ground clutter removal algorithm
+!  unfdiagopt: Unfolding diagnostics Option
+!               0: Do not write velocity unfolding diagnostic files
+!               1: Write velocity unfolding diagnostic files
+!  fillref:    Option to fill-in reflectivity below the lowest
+!               elevation scan.
+!               0: Do not fill-in reflectivity
+!               1: Fill-in reflectivity if low-level
+!                  reflectivity > 25 dBZ and height < 2km AGL
+!  medfilt:    Option to apply a median filter to the raw data
+!               0: No median filter applied
+!               1: Apply a 9-pt median filter
+!  vadopt:     Compute a VAD wind analysis for use in ADAS or 3DVAR?
+!               0: Do not compute VAD
+!               1: Compute VAD and output to sounding file
+!               2: Compute VAD using gradient method
+!               3: An internal computation for validating vadopt = 2.
+!               4: Retrieve VAD when Dr. Xu's velocity dealising algorithm
+!                  is running.
+!
+!            Note: some adjustable variables for VAD are set in the
+!                  the next NAMELIST
+!
+!-----------------------------------------------------------------------
+
+&radremapopt
+   radname = 'KFTG',
+   radband = 1,
+   radfname = './88d_dat/KFTG20090611_232851_V03',
+   nlistfil  = 0,
+   listfil(1) = '/home/kbrews/data/20090514/casa/KCYR.list',
+   ref_time = '20090611_2330',
+   rad98opt  = 0,
+
+   refvarname='DBZ',
+   velvarname='VEL',
+   spwvarname='SPW',
+   snrvarname='SignalToNioseRatio',
+   rhvvarname='RhoHV',
+   zdpvarname='Zdp',
+   zdrvarname='Zdr',
+   zvvvarname='Zvv',
+   kdpvarname='Kdp',
+
+   tradopt   = 1,
+   velprocopt= 1,
+   clrvcpopt = 2,
+   qcopt     = 1,
+   xu_dealiase = 0,
+   xu_modelopt = 2,
+   gclopt    = 1,
+   unfdiagopt= 0,
+   fillref   = 0,
+   medfilt   = 1,
+   vadopt    = 2,
+/
+
+!-----------------------------------------------------------------------
+!
+!  Radar remapping constants
+!
+! bmwidth  Radar half-power beamwidth (degrees)
+!          typical: bmwidth = 1.0
+! dazim    Azimuth sampling interval (degrees)
+!          typical: dazim = 1.0
+! rngmin   Minimum range (m) for remapping
+!          to avoid clutter and near-field noise
+!          typical: rngmin = 3000.
+! rngmax   Maximum range (m) for remappting
+!          typical: rngmax = 230.E03,
+!
+! altoffset Radar altitude correction (normally 0.)
+! northazim Azim of true-north radial (normally 0.)
+!
+! envavgr  Range (m) to use for environmental wind
+!          averaging to create mean profile
+!          to use in the wind quality control
+!          typical: envavgr= (rangemax/1.41)
+!
+! iordref  Order of local polynomial fitting for reflectivity
+!          = 1 Linear (faster, more smooth)
+!          = 2 Quadratic (more fidelity to raw data)
+! iordvel  Order of local polynomial fitting for velocity
+!          = 1 Linear (faster, more smooth)
+!          = 2 Quadratic (more fidelity to raw data)
+
+! refchek  Lower limit of valid reflectivity data.
+!          Smaller values are considered missing.
+!          typical: refchek = -30.
+! refmiss  Missing value to set for reflectivity
+!          typical: refmiss = -999.
+! velchek  Lower limit of valid radial velocity data.
+!          Smaller values are considered missing.
+!          typical: velchek = -300.
+! velmiss  Missing value to set for radial velocity
+!          typical: velmiss = -999.
+!
+! refmedl  Threshold limit (dBZ) to use in the
+!          reflectivity median check
+!          typical: refmedl=20.
+! velmedl  Threshold limit (m/s) to use in the
+!          velocity median check
+!          typical: velmedl=15.,
+! zdrmedl  Threshold limit (dBZ) to use in the
+!          Zdr median check
+!          typical: zdrmedl=5.,
+! kdpmedl  Threshold limit (degrees/km) to use in the
+!          Kdp median check
+!          typical: kdpmedl=20.
+! rhvmedl  Threshold limit (unitless) to use in the
+!          Rho-HV median check
+!          typical: velmedl=0.20
+!
+! refdazl  Delta-azimuth limit (degrees) to use in the
+!          reflectivity remapping
+!          typical: refdazl = 360. (no limit)
+! veldazl  Delta-azimuth limit (degrees) to use in the
+!          velocity remapping.
+!          typical: veldazl = 30.
+!
+! spwthrrat Spectrum width threshold ratio
+!          Spectrum width QC threshold as a fraction of Nyquist Velocity.
+!          typical: spwthrrat = 0.67,
+! rhohvthr Rho-HV QC threshold
+!          typical: rhohvthr = 0.75 for X-band (e.g. CASA)
+!                   rhohvthr = 0.85 for S-band (e.g. WSR-88D)
+! snrthr   Signal-to-noise threshold (dB, applied to X-band only)
+!          typical: snrthr = 0.0,
+! gcvrlim  Ground clutter velocity limit (m/s)
+!          Data below 1.0 deg elevation with absolute
+!          value less than this limit are flagged as clutter.
+!          typical: gcvrlim = 1.6,
+!
+! nfixed_nyqv   Number of fixed Nyquist velocities assigned herein
+!               This should be non-zero when Nyquist velocity is not
+!               available in the radar data file.
+! fixed_nyqv    Value(s) of the Nyquist velocity (m/s)
+! elevlim_fnyqv Maximum elevation for which the specified
+!               Nyquist velocity is valid
+!
+!  The following are only used if vadopt=1 in radremapopt NAMELIST
+!    vadradius    Radius for VAD wind analysis (m)
+!    vadwidth     Width of data to use in VAD wind analysis (m)
+!
+!  The following are used if vadopt=1 or 2 in radremapopt NAMELIST
+!    vadminknt    Minimum count of data points in VAD calculation
+!
+!-----------------------------------------------------------------------
+
+&radremapcst
+  bmwidth = 1.0,
+  dazim = 1.0,
+  rngmin = 3000.,
+  rngmax = 230.E03,
+  altoffset = 0.
+  northazim = 0.
+  envavgr= 162.6E03,
+
+  iordref = 1,
+  iordvel = 2,
+
+  refchek = -90.,
+  refmiss = -999.,
+  velchek = -300.,
+  velmiss = -999.,
+
+  refmedl = 20.,
+  velmedl = 15.,
+  zdrmedl = 5.,
+  kdpmedl = 20.,
+  rhvmedl = 0.30,
+
+  refdazl = 360.,
+  veldazl = 30.,
+
+  spwthrrat = 0.67,
+  rhohvthr = 0.85,
+  snrthr = 0.0,
+  gcvrlim = 1.6,
+
+  nfixed_nyqv = 0,
+  fixed_nyqv  = 21.15,
+  elevlim_fnyqv = 99.0,
+
+  vadradius = 30.0E03,
+  vadwidth  = 1000.,
+  vadminknt = 100,
+/
+!-----------------------------------------------------------------------
+!
+!  Radar remapping output options
+!
+!  dirname      Directory name for the output files
+!  fntimopt     Remapped radar data columns filename time option
+!               0: Name the data column file using the actual data time
+!                  that is read from the first radial in the file
+!               1: Name the data column file after the time in the filename
+!                  When nlistfil > 1, name the file after the ref_time.
+!  dmpfmt       Format for the column files and the gridded files
+!               1: Binary
+!               3: HDF
+!  hdf4cmpr     Compression scheme for HDF files
+!               1-4 increasing level of compression with increasing cost
+!               hdf4cmpr=2 recommended
+!  dmpzero      Specify whether a column remapped file should be
+!               produced in the case that there are zero valid columns.
+!               0 : Do not write a zero-column file
+!               1 : Write the zero-column file (recommended in cycling
+!                   mode so that no-echo regions can be corrected in
+!                   the cloud analysis)
+!  dualpout     Remap and output dualpol data, in the column data file,
+!               if available in the input data. Zdr, Kdp and Rho-HV
+!               will be output.   This will add to the processing time
+!               and output file size.
+!               0 : Do not write the dual-pol data
+!               1 : Write the dual-pol data, if available
+!
+!  ref2dopt     Produce an additional reflectivity file that can be read
+!               by arpsplt (arbvar options) consisting of a 2D remapping
+!               of the reflectivity data on the lowest elevation angle.
+!               0 : Do not produce 2D reflectivity file
+!               1 : Produce the 2D reflectivity file
+!  ref3dopt     Produce an additional reflectivity file that can be read
+!               by arpsplt (arbvar options) consisting of the 3D remapped
+!               reflectivity data.
+!               0 : Do not produce 3D reflectivity file
+!               1 : Produce the 3D reflectivity file
+!  vel2dopt     For 2D radial velocity file, as in ref2dopt.
+!  vel3dopt     For 3D radial velocity file, as in ref3dopt.
+!  zdr2dopt     For 2D Zdr file, as in ref2dopt.
+!  zdr3dopt     For 3D Zdr file, as in ref3dopt.
+!  kdp2dopt     For 2D Kdp file, as in ref2dopt.
+!  kdp3dopt     For 3D Kdp file, as in ref3dopt.
+!  rhv2dopt     For 2D Rho-HV file, as in ref2dopt.
+!  rhv3dopt     For 3D Rho-HV file, as in ref3dopt.
+!
+!  wttiltopt    Output az-ran data on tilts
+!               0 : Do not produce an az-ran file for plotting
+!               1 : Produce an az-ran data file for plotting
+!  wtgrdtiltopt Output grid-tilt file
+!               0 : Do not produce a grid-tilt output file
+!               1 : Produce a grid-tilt output file
+!  grdtiltver   Output grid-tilt version
+!               1 : Original version - output at all grid points
+!               2 : Output only at non-missing points
+!  wtsoloopt    Output DORADE format sweep files for use in Solo-II
+!               0 : Do not produce Solo-II files
+!               1 : Produce Solo-II files
+!               2 : Produce Solo-II QC'd data files after QC steps
+!               3 : Produce Solo-II file both before QC and after QC steps
+!
+!             NOTE:
+!               if wtsoloopt = 2 or 3, qcopt will be truned on
+!               automatically.
+!
+!               if wtsoloopt > 0, the program will not do remapping
+!               by default. If users need the remapped files,
+!               wtsoloopt should be set greater than 100.
+!               For example, wtsoloopt = 101 to turn on both SOLO
+!               output and remapped outputs.
+!               wtsoloopt = 102 to turn on both SOLO output after QC
+!               steps and remapped outputs.
+!
+!  runname      Name that is used as part of the filename for the
+!               ref2d, ref3d, vel2d, and vel3d files.  For easier use
+!               of these files in the arpsplt package it is best to use
+!               the same runname as used in inifile.
+!  outtime      Time (in sec) that is used as part of the filename for the
+!               ref2d, ref3d, vel2d, and vel3d files.  For easier use
+!               of these files in the arpsplt package it is best to use
+!               the same outtime as used in inifile.
+!-----------------------------------------------------------------------
+
+&radremapout
+   dirname   = './',
+   fntimopt  = 1,
+   dmpfmt    = 7,
+   hdf4cmpr  = 2,
+   dmpzero   = 0,
+   dualpout  = 1,
+   ref2dopt  = 0,
+   ref3dopt  = 0,
+   vel2dopt  = 0,
+   vel3dopt  = 0,
+   zdr2dopt  = 0,
+   zdr3dopt  = 0,
+   kdp2dopt  = 0,
+   kdp3dopt  = 0,
+   rhv2dopt  = 0,
+   rhv3dopt  = 0,
+   wttiltopt   = 0,
+   wtgrdtiltopt= 0,
+   grdtiltver  = 2,
+   wtsoloopt   = 0,
+   runname   = '88d200906112330',
+   outtime   = 36000.,
+/
+
+!-----------------------------------------------------------------------
+!
+!  Debug information printing level.
+!
+!  lvldbg    Level of debug information printing.
+!          =0, no debug printing;
+!          >90, Print verbose output
+!
+!-----------------------------------------------------------------------
+
+ &debug
+   lvldbg = 0,
+ /

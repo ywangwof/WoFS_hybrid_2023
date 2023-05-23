@@ -1,0 +1,329 @@
+#!/bin/bash
+
+cmd=`basename $0 2>/dev/null`;
+
+print_help () {
+  echo " "
+  echo "  Usage: $cmd [options] SRC DES"
+  echo "  "
+  echo "  Valid commands are:"
+  echo "  "
+  echo "     lnvar  - Link a NEWSVAR package from SRC to DES. "
+  echo "     cmpvar - Compare two NEWSVAR packages."
+  echo "     cpvar  - Copy an NEWSVAR package from SRC to DES. "
+  echo "  "
+  echo "      SRC:  Name of directory for the NEWSVAR source      package."
+  echo "      DES:  Name of directory for the NEWSVAR destination package."
+  echo " "
+  echo "  Options: "
+  echo "         -h | --help        Show this help"
+  echo "         -v | --verbose     Show more outputs while executing"
+  echo "         -d | -n            Show commands but do not execute them"
+  echo "         -x                 Exchange SRC and DES and do it again (for comparing only)"
+  echo "         -f | --fine        Do not ignore .f/.f90 files for comparison"
+  echo "                            by default, .f/.f90 files will be ignored if the corresponding *.F/*.F90 files exist"
+  echo "         -r var_subdir      Link/Compare/Copy NEWSVAR subdirectory only"
+  echo " "
+  echo "               --- by Yunheng Wang (04/08/2008) - version 2.0 ---"
+  echo "  "
+  exit
+}
+
+check_file () {
+  # $1 - file name
+  # $2 - file directory
+  # $3 - detail
+  #
+  local sdir=$2;
+
+  local iret=0;
+  case $1 in
+     *.bug | *.BUG | *.old | *.OLD | *.org | *.ORG | *.BAK | *.bak | *_bak )    # ignore these files
+         iret=1
+         ;;
+     *.f )
+         if $3
+         then
+           iret=0;
+         else
+           f=`basename $1 .f`;
+           if [ -f $sdir/$f.F -o -f $sdir/$f.F90 ]; then iret=1; fi
+         fi
+         ;;
+
+     *.f90 )
+         if $3
+         then
+           iret=0;
+         else
+           f=`basename $1 .f90`;
+           if [ -f $sdir/$f.F -o -f $sdir/$f.F90 ]; then iret=1; fi
+         fi
+         ;;
+
+     *.F | *.F90 | *.c | *.py | *.sh | *.OPRM | *.yaml | ?akefile* | make* | *.inc | *.h )
+         ;;
+
+     README* | namelist.* | *.input* | *.parm* | *.snd | *.table | *.adastab | *.enkftab)
+         ;;
+
+     zx*f?? | nqs.* | *.gs | *.tmpl | *.ncl | *.sfc | *.pltcbar | *.pl | *.pm | *.mapdata | *.meta | *.tbl | *.txt | *.pdf | *.doc )
+         ;;
+
+     radarinfo.dat | radarinfo_CINRAD.dat | *random_flips | *.rim | *.cat | *.cel | CHANGES | useg )
+         ;;
+
+     cron_gen | runhr-fcst | runhr-inone | runhr-rlt )
+         ;;
+
+      * )
+         iret=1;
+         ;;
+  esac
+
+  return $iret;
+}
+
+link_file () {
+  # $1 - source file
+  # $2 - destination file
+  #
+  if [ -f $2 ]; then
+     $verbose  && echo "######## $2 exists."
+  else
+     $doit ln -s $1 $2 && [[ $doit == "echo" ]] || echo "++++++++ $2 linked."
+  fi
+}
+
+compare_file () {
+  # $1 - 1st file
+  # $2 - 2nd file
+  if [ ! -f $2 ]; then
+    echo "---  xxx $2 not exist."
+  else
+    $doit cmp -s $1 $2
+    if [ $? -eq 0 ]; then
+      if [ "$doit" != "echo" ]; then $verbose && echo "===  === $2 identical."; fi
+    else
+      echo "***  *** $2 different."
+    fi
+  fi
+}
+
+copy_file () {
+   # $1 - source file
+   # $2 - destination file
+   cmp -s $1 $2
+   if [ $? -ge 1 ]; then        # file different or not exist in DES
+     $doit cp $1 $2 && [[ "$doit" == "echo" ]] || echo "++++++++ $2 copied."
+   else
+     if [ "$doit" == "" ]; then $verbose && echo "======== $2 identical."; fi
+   fi
+}
+
+#
+# Parsing arguments
+#
+doit="";
+help=false;
+verbose=false;
+exchng=false;
+fine=false;
+
+while [ $# -ge 1 ]; do
+  case $1 in
+    "-h" | "--help"    ) print_help; exit;;
+    "-v" | "--verbose" ) verbose=true;;
+    "-d" | "-n"        ) doit='echo';;
+    "-x"               ) exchng=true;;
+    "-f" | "--fine"    ) fine=true;;
+    "-r" )
+      shift
+      sub_dirs=$1;;
+    * )
+      if [ $# -ne 2 ]; then
+        break;
+      else
+        src=$1;
+        des=$2;
+      fi
+      shift;;
+  esac
+  shift
+done
+
+if [ ! -d $src ]; then
+  echo "  **** Source directory $src not exists."
+  help=true
+else
+  if [ ! -d $des ]; then
+    if [ "$cmd" == "lnvar" ]; then
+      echo "  **** Directory $des not exists, Creating ..."
+      $doit mkdir $des
+    else
+      echo "  **** Dest. Directory $des not exists."
+      help=true
+    fi
+  fi
+fi
+
+if [ -z $src -o -z $des ]; then echo "  **** No enough arguments."; help=true; fi
+
+$help && print_help;
+
+src=`cd $src; pwd`;
+#des=`cd $des; pwd`
+
+$verbose && echo "@@@@@@@@ Executing command: $cmd $src $des @@@@@@@@"
+
+#
+# Initialize directory array
+#
+if [ -z "$sub_dirs" ]; then
+  top_fils="build Makefile NOTES README mkall "
+  sub_dirs="data NSSLVAR extra include input scripts src"
+  sub_dirs="$sub_dirs data/adas data/arpsplt data/3dvar"
+  sub_dirs="$sub_dirs src/radremap src/radremap/a2io src/radremap/soloio src/radremap/xu_dealiase"
+  sub_dirs="$sub_dirs src/adas       src/arps"
+  sub_dirs="$sub_dirs src/arps_mp    src/enrelax2pr"
+  sub_dirs="$sub_dirs src/getmaxref"
+  sub_dirs="$sub_dirs src/news3dvar  src/osseutil"
+  sub_dirs="$sub_dirs src/radaremul  src/tinterp"
+  sub_dirs="$sub_dirs src/verif      src/wrfapi"
+  sub_dirs="$sub_dirs src/wrfpost    src/zxplot"
+  sub_dirs="$sub_dirs src/external   src/external/bufr"
+  sub_dirs="$sub_dirs src/external/g2lib  src/external/libgrib"
+  sub_dirs="$sub_dirs extra/add_pert  extra/cwp_calc  extra/cwp_calc_allhydro"
+  sub_dirs="$sub_dirs extra/obs_sat  extra/rms_stat  extra/tpw_calc  extra/verification extra/wind_convert"
+  sub_dirs="$sub_dirs NSSLVAR/calib  NSSLVAR/input  NSSLVAR/nclscripts  NSSLVAR/NCLRANGS"
+fi
+
+#!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+#
+# Beginning of script
+#
+#!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+case "$cmd" in
+
+  lnvar )
+
+    for fn in  $top_fils
+    do
+      file=`basename $fn`
+      link_file $src/$file $des/$file
+    done
+
+    for dir in $sub_dirs
+    do
+       if [ ! -d $des/$dir ]; then
+         $doit mkdir $des/$dir  && [[ $doit == "echo" ]] || echo "dddd++++ $des/$dir created."
+       fi
+
+       for file in `cd $src/$dir;ls`
+       do
+         check_file $file $src/$dir false
+         if [ $? -eq 0 ]; then
+           link_file $src/$dir/$file $des/$dir/$file
+         fi
+
+       done
+    done
+     ;;
+
+#
+# Compare two NEWSVAR packages
+#
+   cmpvar )
+
+    docomparison=1;
+    while [ $docomparison -ge 1 ]; do
+
+      for fn in  $top_fils
+      do
+        file=`basename $fn`
+        if [ -f $src/$file ]; then    # SRC file exist
+          compare_file $src/$file $des/$file
+        else
+          $verbose && echo "x------- $src/$file not exist."
+        fi
+      done
+
+      for dir in $sub_dirs
+      do
+         if [ ! -d $des/$dir ]; then
+           echo "ddd----x $des/$dir not exist."
+           continue
+         fi
+
+         if [[ ! -d $src/$dir ]]; then
+             echo ""ddd???-- $src/$dir not exist.""
+             continue
+         else
+            for file in `cd $src/$dir;ls`
+            do
+              check_file $file $src/$dir $fine
+
+              if [ $? -eq 0 ]; then
+                compare_file $src/$dir/$file $des/$dir/$file
+              fi
+
+            done
+         fi
+      done
+
+      docomparison=0;
+
+      if $exchng
+      then
+        tstr=$src
+        src=$des;
+        des=$tstr;
+        docomparison=1;
+        exchng=false;
+      fi
+    done
+    ;;
+
+#
+# Copy NEWSVAR files from one package to another package as long as they is different.
+#
+   cpvar )
+
+    for fn in  $top_fils
+    do
+       file=`basename $fn`
+
+       if [ -f $src/$file ]; then     # file exist in SRC
+           copy_file $src/$file $des/$file
+       else                           # file not exist in SRC
+           $verbose && echo "x------- $src/$file not exist."
+       fi
+    done
+
+    for dir in $sub_dirs
+    do
+       if [ ! -d $des/$dir ]; then
+         $doit mkdir $des/$dir && [[ "$doit" == "echo" ]] || echo "dddd++++ $des/$dir created."
+       fi
+
+       for file in `cd $src/$dir;ls`
+       do
+         check_file $file $src/$dir false
+
+         if [ $? -eq 0 ]; then
+           copy_file $src/$dir/$file $des/$dir/$file
+         fi
+
+       done    # files loop
+    done       # dirs  loop
+
+    ;;
+
+   * )
+     echo "  Unknown command: $cmd."
+     exit 1
+     ;;
+esac
+
+exit 0

@@ -1,0 +1,6 @@
+! Calibration constants for GOES-14 Visible Channel
+! 
+! Launch
+! Date      Day 0 Cal  Dim Rate (per day)
+!
+'2009-06-27'  1.000    0.0001022

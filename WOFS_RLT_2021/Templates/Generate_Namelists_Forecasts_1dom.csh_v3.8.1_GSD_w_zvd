@@ -1,0 +1,2404 @@
+#!/bin/csh -f
+#
+#-----------------------------------------------------------------------
+# Script Generate_Namelist.csh
+#
+# Purpose: Generate namelist files for different physics option.
+#
+# Usage: Generate_Namelist.csh <date> 
+#
+#        Called by Run_EKF_Ensemble.csh
+#
+#-----------------------------------------------------------------------
+
+set  WRFDIR = /home/wof/WOFS/Templates
+#
+set echo
+set cycle = 12
+set ymd = $argv[1]
+set trunc_ymd = `expr substr $argv[1] 2 5`
+#
+cd ${WRFDIR}
+#
+${WRFDIR}/tomorrow.csh $trunc_ymd > ${WRFDIR}/tomorrow
+#
+set yy = `expr substr ${ymd} 1 2`
+set mm = `expr substr ${ymd} 3 2`
+set dd = `expr substr ${ymd} 5 2`
+set yyyy = 20${yy}
+set yy_12 = 20`cut -c 1-2 ${WRFDIR}/tomorrow`
+set mm_12 = `cut -c 3-4 ${WRFDIR}/tomorrow`
+set dd_12 = `cut -c 5-6 ${WRFDIR}/tomorrow`
+#
+# set up namelist
+#
+rm -rf namelist.input*
+######################################################################################################################33
+#
+# HEAD
+#
+cat > namelist.input.head <<EOF
+ &time_control
+ run_days                            = 0,
+ run_hours                           = 0,
+ run_minutes                         = 0,
+ run_seconds                         = 0,
+ start_year                          = ${yyyy},    
+ start_month                         = ${mm},       
+ start_day                           = ${dd},       
+ start_hour                          = ${cycle},  
+ start_minute                        = 00,
+ start_second                        = 00,
+ end_year                            = ${yyyy},   
+ end_month                           = ${mm},    
+ end_day                             = ${dd},   
+ end_hour                            = ${cycle}, 
+ end_minute                          = 00,
+ end_second                          = 00,
+ interval_seconds                    = 3600,
+ input_from_file                     = .true.,  
+ history_interval                    = 60, 
+ frames_per_outfile                  = 1,    
+ cycling                             = .true.,
+ restart                             = .false.,
+ restart_interval                    = 5000,
+ io_form_history                     = 2,
+ io_form_restart                     = 2,
+ io_form_input                       = 2,
+ io_form_boundary                    = 2,
+ debug_level                         = 0,
+ nwp_diagnostics                     = 1,
+ reset_interval1                     = 5,
+ iofields_filename                   = "forecast_vars_d01.txt"
+ ignore_iofields_warning             = .true.,
+ auxhist7_outname                    = "wrfwof_d<domain>_<date>",
+ auxhist7_interval                   = 5,
+ frames_per_auxhist7                 = 1,
+ io_form_auxhist7                    = 2,
+ /
+
+ &domains
+ time_step                           = 15, 
+ time_step_fract_num                 = 0,
+ time_step_fract_den                 = 1,
+ max_dom                             = 1,
+ e_we                                = 250, 250,    
+ e_sn                                = 250, 250,
+ e_vert                              = 51, 51,
+ num_metgrid_levels                  = 51,
+ num_metgrid_soil_levels             = 9,
+ dx                                  = 3000., 3000., 
+ dy                                  = 3000., 3000.,
+ grid_id                             = 1, 2,  
+ parent_id                           = 1, 1,     
+ i_parent_start                      = 0, 136,    
+ j_parent_start                      = 0, 65,  
+ parent_grid_ratio                   = 1, 5,     
+ parent_time_step_ratio              = 1, 5,    
+ feedback                            = 0,
+ smooth_option                       = 0,
+ p_top_requested                     = 2000,
+ interp_type                         = 1,
+ hypsometric_opt                     = 2,
+ lowest_lev_from_sfc                 = .false.,
+ lagrange_order                      = 1,
+ force_sfc_in_vinterp                = 1,
+ zap_close_levels                    = 500,
+ smooth_cg_topo                      = .true.,
+ sfcp_to_sfcp                        = .false.,
+ adjust_heights                      = .false.,
+ eta_levels   =   1.0000, 0.9980, 0.9940, 0.9870, 0.9750, 0.9590,
+          0.9390, 0.9160, 0.8920, 0.8650, 0.8350, 0.8020, 0.7660,
+          0.7270, 0.6850, 0.6400, 0.5920, 0.5420, 0.4970, 0.4565,
+          0.4205, 0.3877, 0.3582, 0.3317, 0.3078, 0.2863, 0.2670,
+          0.2496, 0.2329, 0.2188, 0.2047, 0.1906, 0.1765, 0.1624,
+          0.1483, 0.1342, 0.1201, 0.1060, 0.0919, 0.0778, 0.0657,
+          0.0568, 0.0486, 0.0409, 0.0337, 0.0271, 0.0209, 0.0151,
+          0.0097, 0.0047, 0.0000,
+ numtiles                             = 6,
+ nproc_x                              = 4,
+ nproc_y                              = 12,
+ reorder_mesh                         = .true.,
+/
+EOF
+######################################################################################################################33
+#
+# TAIL
+#
+######################################################################################################################33
+cat > namelist.input.tail <<EOF
+ &fdda
+ /
+ &dynamics
+ w_damping                           = 1,
+ diff_opt                            = 1,
+ km_opt                              = 4,
+ hybrid_opt                          = 0,
+ diff_6th_opt                        = 2, 
+ diff_6th_factor                     = 0.08, 
+ damp_opt                            = 3, 
+ zdamp                               = 5000.,  5000.,
+ dampcoef                            = 0.2,    0.2,
+ use_input_w                         = .true., 
+ khdif                               = 0,      0, 
+ kvdif                               = 0,      0,
+ SMDIV                               = 0.1,    0.1,
+ EMDIV                               = 0.01,   0.01, 
+ EPSSM                               = 0.1,    0.1,   
+ non_hydrostatic                     = .true., .true., 
+ moist_adv_opt                       = 4,      2,  
+ scalar_adv_opt                      = 4,      2,
+ TIME_STEP_SOUND                     = 6,      6, 
+ H_MOM_ADV_ORDER                     = 5,      5, 
+ V_MOM_ADV_ORDER                     = 3,      3,
+ H_SCA_ADV_ORDER                     = 5,      5, 
+ V_SCA_ADV_ORDER                     = 3,      3,  
+ /
+
+ &bdy_control
+ spec_bdy_width                      = 5,
+ spec_zone                           = 1,
+ relax_zone                          = 4,
+ specified                           = .true., .false., .false.,
+ nested                              = .false., .true., .true.,
+ /
+
+ &grib2
+ /
+
+ &namelist_quilt
+ nio_tasks_per_group = 0,
+ nio_groups = 1,
+ /
+EOF
+######################################################################################################################33
+#
+# Ensemble Member 1
+#
+cat > namelist.input.physics1 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,  
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,   
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,    
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 2
+#
+cat > namelist.input.physics2 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,  
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,    
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 3
+#
+cat > namelist.input.physics3 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2, 
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 4
+#
+cat > namelist.input.physics4 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,  
+ ra_sw_physics                       = 4, 4,   
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,   
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11, 
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 5
+#
+cat > namelist.input.physics5 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5, 
+ sf_surface_physics                  = 3, 3,   
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 6
+#
+cat > namelist.input.physics6 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,  
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,   
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5,  
+ bldt                                = 0, 0,    
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 7
+#
+cat > namelist.input.physics7 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1   
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,   
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 8
+#
+cat > namelist.input.physics8 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,  
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 9
+#
+cat > namelist.input.physics9 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18, 
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,  
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 10
+#
+cat > namelist.input.physics10 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,   
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 11
+#
+cat > namelist.input.physics11 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,  
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 12
+#
+cat > namelist.input.physics12 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18, 
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 13
+#
+cat > namelist.input.physics13 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18, 
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 14
+#
+cat > namelist.input.physics14 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,   
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 15
+#
+cat > namelist.input.physics15 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 16
+#
+cat > namelist.input.physics16 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3, 
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 17
+#
+cat > namelist.input.physics17 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,  
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 18
+#
+cat > namelist.input.physics18 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,  
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 19
+#
+cat > namelist.input.physics19 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 20
+#
+cat > namelist.input.physics20 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,  
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 21
+#
+cat > namelist.input.physics21 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,  
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 22
+#
+cat > namelist.input.physics22 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 23
+#
+cat > namelist.input.physics23 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 24
+#
+cat > namelist.input.physics24 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 25
+#
+cat > namelist.input.physics25 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,  
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 26
+#
+cat > namelist.input.physics26 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 27
+#
+cat > namelist.input.physics27 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,  
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 28
+#
+cat > namelist.input.physics28 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 29
+#
+cat > namelist.input.physics29 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 30
+#
+cat > namelist.input.physics30 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 31
+#
+cat > namelist.input.physics31 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 32
+#
+cat > namelist.input.physics32 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 1, 1,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 1, 1, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 33
+#
+cat > namelist.input.physics33 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,  
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 34
+#
+cat > namelist.input.physics34 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 2, 2,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 2, 2, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 35
+#
+cat > namelist.input.physics35 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 1, 1,   
+ ra_sw_physics                       = 1, 1,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5,  
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ prec_acc_dt                         = 15.
+ /
+EOF
+#
+# Ensemble Member 36
+#
+cat > namelist.input.physics36 <<EOF
+ &physics
+ write_thompson_tables               = .false.,
+ mp_physics                          = 18, 18,
+ nssl_cccn                           = 1.25e9,
+ do_radar_ref                        = 1,
+ ra_lw_physics                       = 4, 4,   
+ ra_sw_physics                       = 4, 4,  
+ radt                                = 10, 10,
+ swint_opt                           = 1,
+ CO2TF                               = 1,
+ sf_sfclay_physics                   = 5, 5,
+ sf_surface_physics                  = 3, 3,  
+ sf_lake_physics                     = 0, 0,
+ bl_pbl_physics                      = 5, 5, 
+ bldt                                = 0, 0,   
+ bl_mynn_tkebudget                   = 0,
+ bl_mynn_tkeadvect                   = .false.,
+ bl_mynn_cloudpdf                    = 0,
+ bl_mynn_edmf                        = 0,
+ bl_mynn_edmf_mom                    = 0,
+ bl_mynn_edmf_tke                    = 0,
+ bl_mynn_mixlength                   = 1,
+ grav_settling                       = 0,
+ scalar_pblmix                       = 1,
+ cu_physics                          = 0, 0,    
+ cudt                                = 0, 0,
+ hailcast_opt                        = 1,
+ haildt                              = 30,
+ elec_physics                        = 4,
+ nssl_ipelec                         = 2,
+ nssl_isaund                         = 11,
+ isfflx                              = 1,
+ ifsnow                              = 1,
+ icloud                              = 1,
+ icloud_bl                           = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 9,
+ sf_urban_physics                    = 0,
+ mp_zero_out                         = 2,
+ mp_zero_out_thresh                  = 1.e-10,
+ use_aero_icbc                       = .false.,
+ use_rap_aero_icbc                   = .false.,
+ maxiens                             = 1,
+ maxens                              = 3,
+ maxens2                             = 3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ usemonalb                           = .true.,
+ rdlai2d                             = .true.,
+ num_land_cat                        = 20,
+ mosaic_lu                           = 1
+ mosaic_soil                         = 1
+ fractional_seaice                   = 0,
+ seaice_threshold                    = 271.4
+ aer_opt                             = 0,
+ prec_acc_dt                         = 15.
+ /
+EOF
+######################################################################################################################33
+#
+set count = 1
+
+while ( $count <= 36 )
+cat namelist.input.head namelist.input.physics${count} namelist.input.tail > ${WRFDIR}/namelist.input.member${count}
+@ count = $count + 1
+end 
+#
+mv namelist.input.member* namelists.WOFS.fcst
+rm -rf namelist.input*
+#
+echo 'All namelist files done'
+#
+exit (0)
+######################################################################################################################33

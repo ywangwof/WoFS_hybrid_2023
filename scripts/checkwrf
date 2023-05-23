@@ -1,0 +1,163 @@
+#!/bin/bash
+
+rundir="/scratch/ywang/test_runs/hyb3.0km"
+
+if [[ $(date +%H) -le 15 ]]; then
+    eventdate=$(date -d "1 day ago" +%Y%m%d)
+else
+    eventdate=$(date +%Y%m%d)
+fi
+eventtime=0000
+
+function usage {
+    echo " "
+    echo "    USAGE: $0 [options] EVENTDATE [EVENTTIME]"
+    echo " "
+    echo "    PURPOSE: check WRF forecast status and resubmit the job with different MPI configuration if requested"
+    echo " "
+    echo "    EVENTDATE - Event date in YYYYMMDD"
+    echo "    EVENTTIME - Run time in HHMM"
+    echo " "
+    echo "    OPTIONS:"
+    echo "              -h              Display this message"
+    echo "              -n              Show command to be run only"
+    echo "              -v              Verbose mode"
+    echo "              -r nprocx,nprocy  Rerun MPI configuration"
+    echo "              -d run_dir      Run directory "
+    echo " "
+    echo "   DEFAULTS:"
+    echo "              EVENTDATE = $eventdate"
+    echo "              EVENTTIME = ${eventtime}"
+    echo "              rundir    = $rundir"
+    echo " "
+    echo "                                     -- By Y. Wang (2021.06.23)"
+    echo " "
+    exit $1
+}
+
+#-----------------------------------------------------------------------
+#
+# Default values
+#
+#-----------------------------------------------------------------------
+
+show=0
+verb=0
+
+rerun=0
+nxproc=0
+nyproc=0
+
+#-----------------------------------------------------------------------
+#
+# Handle command line arguments
+#
+#-----------------------------------------------------------------------
+
+while [[ $# > 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        -h)
+            usage 0
+            ;;
+        -n)
+            show=1
+            ;;
+        -v)
+            verb=1
+            ;;
+        -d)
+            rundir=$2
+            if [[ ! -d $rundir ]]; then
+                echo ""
+                echo "ERROR: $rundir does not exists."
+                usage -2
+            fi
+            shift
+            ;;
+        -r)
+            rerun=1
+            if [[ $2 =~ ^[0-9]{1,2},[0-9]{1,2}$ ]]; then
+                ranges=(${2//,/ })
+                nxproc=${ranges[0]}
+                nyproc=${ranges[1]}
+                shift
+            else
+                echo "ERROR: unacceptable arg for option '-r', got $2."
+                usage 1
+            fi
+            ;;
+
+        -*)
+            echo "Unknown option: $key"
+            exit
+            ;;
+        *)
+            if [[ $key =~ ^[0-9]{8}$ ]]; then
+                eventdate=$key
+            elif [[ $key =~ ^[0-9]{4}$ ]]; then
+                eventtime=$key
+            else
+                echo ""
+                echo "ERROR: unknown option, get [$key]."
+                usage -2
+            fi
+            ;;
+    esac
+    shift # past argument or value
+done
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+#
+# Do checking
+#
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+errfile="$rundir/$eventdate/${eventtime}Z/dom20/wrf5/rsl.error.0000"
+if [[ ! -r $errfile ]]; then
+    echo "ERROR: file \"$errfile\" not exist"
+    exit 1
+fi
+
+tag=$( tail -n 1 $errfile )
+if [[ "$tag" =~ " wrf: SUCCESS COMPLETE WRF" ]]; then
+    echo "$rundir/$eventdate/${eventtime}Z done successfully."
+    exit 0
+fi
+
+nmlfile="$rundir/$eventdate/${eventtime}Z/dom20/wrf5/namelist.input"
+slurmfile="$rundir/$eventdate/${eventtime}Z/dom20/wrf5/wrf7_$eventtime.slurm"
+
+nx=$(pynml -t nproc_x $nmlfile)
+ny=$(pynml -t nproc_y $nmlfile)
+echo "$nmlfile: ($nx x $ny)"
+tail -20 $errfile
+
+if [[ $rerun -gt 0 ]]; then
+    total=$(( nxproc * nyproc ))
+
+    ncores=24
+    if [[ $(( total%ncores )) -eq 0 ]]; then
+        nnodes=$(( total/ncores ))
+    else
+        nnodes=$(( total/ncores+1 ))
+    fi
+
+
+    sed -i "/nproc_x/s/[0-9]\+/$nxproc/;/nproc_y/s/[0-9]\+/$nyproc/" $nmlfile
+
+    sed -i "/#SBATCH -N [0-9]\+ -n [0-9]\+/s/-N [0-9]\+ -n [0-9]\+/-N $nnodes -n $total/;/#SBATCH --ntasks-per-node=/s/[0-9]\+/$ncores/;/srun --label/s/[0-9]\+/$total/" $slurmfile
+
+    echo "======================================"
+    if [[ $verb -eq 1 ]]; then
+        echo "sbatch $slurmfile"
+    fi
+
+    if [[ $show -eq 0 ]]; then
+        sbatch $slurmfile
+    fi
+fi
+
+exit 0

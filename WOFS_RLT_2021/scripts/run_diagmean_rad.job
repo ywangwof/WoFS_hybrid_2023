@@ -1,0 +1,25 @@
+#!/bin/csh 
+#======================================================
+#SBATCH -J DIAG_MEAN_RAD
+#SBATCH -o diagmean_rad.o%j
+#SBATCH -e diagmean_rad.err
+#SBATCH -p batch
+#SBATCH --ntasks-per-node=1
+#SBATCH -n 1
+#SBATCH -t 0:10:00 
+#======================================================
+
+echo "BEGIN DIAG_MEAN_RAD"
+date
+
+export PATH=./:/bin:/scratch/software/intel/netcdf/bin:/scratch/software/miniconda3/bin:$PATH
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/scratch/software/intel/netcdf/lib:/scratch/software/intel/hdf5/lib:/scratch/software/intel/grib2/libpng/lib:/scratch/software/intel/grib2/zlib/lib:/scratch/software/miniconda3/lib:/usr/lib64
+
+srun innov_mean_radiance.exe namelist.innov.rad > diag_meanrad.output
+
+echo "END DIAG_MEAN_RAD"
+
+touch diagmeanrad_done
+
+date
+exit 0

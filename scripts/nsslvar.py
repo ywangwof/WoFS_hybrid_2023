@@ -1,0 +1,671 @@
+#!/usr/bin/env python3
+## ---------------------------------------------------------------------
+##
+## This is a python program that drives the 3DVAR analysis workflow for
+## NSSL.
+##
+## It a multi-layer script suite.
+##
+##   1. the upper layer is this file and it builds a configurator, a case
+##      and run the workflow;
+##   2. the middle layer are:
+##      nsslcntl.py      define the workflow;
+##      nsslconf.py      handle the configuration related issues
+##      nssldomains.py   define the domains to be processed
+##   3. User makes configuration changes in config.yaml;
+##   4. System specific changes will be made in Command_Xxxx.py, where
+##      "Xxxx" is the name for platforms. It is usually configrable by
+##      a system administrator.
+##   5. Accessary utilities are:
+##      namelist.py       handle fortran namelist
+##      configBase.py     Base class of Command_Xxxx.py and
+##                        other utility classes, for examples,
+##                        logging, jobid, mpiconfig, config objects etc.
+##
+## ---------------------------------------------------------------------
+##
+## HISTORY:
+##
+##   Yunheng Wang (12/11/2015)
+##   Initial version based on early works at CAPS.
+##
+##
+########################################################################
+##
+## Requirements:
+##
+##   o Python 3.6 or above
+##
+########################################################################
+
+import sys, os, time
+from datetime import timedelta
+import argparse
+import threading
+import queue
+
+from nsslcntl import NSSLCase as APSFlow
+from nsslconf import caseConf as APSCase
+from nssldomains import NSSLDomains
+from configBase import runException
+import namelist
+
+##======================================================================
+## Parse command line arguments
+##======================================================================
+
+def parseargv():
+  global _debug, _show, _days
+
+  version  = '3.0'
+  lastdate = '2021.04.09'
+
+  defaultwrkdir = Command.configurator.fetchDefaultWorkingDir()
+
+  usage='\r{}\nUsage: %(prog)s [options] [wrktime] [wrkdir]'.format(f'Version {version}, {lastdate} by Y. Wang\n'.ljust(len('usage:')))
+
+  parser = argparse.ArgumentParser(description="Variational/Hybrid/Ensemble Analysis and Forecast System",
+                     formatter_class = argparse.RawTextHelpFormatter,
+                     usage=usage)
+  parser.add_argument("-v", "--verbose", action="store_true", help="More messages while running")
+  parser.add_argument("-n", "--dry",     action="store_true", help="Generate namelist files and job scripts only without actually running them")
+
+  parser.add_argument("-c", "--conf",    default='config.yaml', help="File that provides configuration in YAML format")
+  parser.add_argument("-f", "--file",                           help="File that provides domain and grid information")
+  parser.add_argument("-r", "--run",     type=int, choices=range(1,8), default=1,
+                      help='''Case No denotes the workflow to be executed
+( 1: Variational analysis only                       )
+( 2: WRF forward forecasting                         )
+( 3: WRF analysis and forecasting all in one         )
+( 4: Cycled analysis - require cycle number at 1st cycle, see option "-l"  )
+( 5: Cycled forward forecasting - require option "-b" for cycles other than the 1st cycle )
+( 6: Free forecast from the last analysis cycle - 180 minutes )
+( 7: Same as 6, but with free forecast length of 360 minutes  )
+( 27: Hybrid analysis with NEWS-e                    )''' )
+  parser.add_argument("-l", "--cycle",     type=int, default=9,  help='''Number of cycle only used by "-r 4"
+Will be required for the first cycle "-l 1",
+otherwise, other number > 1 will work.
+if numcycle < 0, it will be hybrid runs''' )
+  parser.add_argument("-b", "--cyclebase", default='', help='''Root directory of the initial cycle
+it will be determined automatically if neither "-f" nor "-c"
+option is given, otherwise, we want to determine whether we should run WPS for this cycle.
+It should be "${wrkdir}/YYYYMMDD/HHMMZ"''' )
+  if cmd == 'clean.py':
+      parser.add_argument("-p", "--dirs", default='',           help='''Dirs to be cleaned (comma separated)''')
+      parser.add_argument("-d", "--days", default=1,  type=int, help='''Days of run to be deleted (backward)''')
+  else:
+      parser.add_argument("-p", "--program", default=None, help='''Programs to be run, default: all programs specified in the configuration file''')
+
+  parser.add_argument("wrktime", nargs='?', help="Starting time as YYYYmmdd[HH[MM[SS]]]")
+  parser.add_argument("wrkdir",  nargs='?', help=f"Working directory, default: {defaultwrkdir}" )
+
+  args = parser.parse_args()
+
+  ##
+  ## Decode command line arguments
+  ##
+
+  _debug = args.verbose
+  _show  = args.dry
+
+  if not os.path.lexists(args.conf):
+      parser.print_help()
+      raise runException(f'configuration file <{args.conf}> not exist')
+
+  #if len(args.cyclebase) > 2:
+  #    if not os.path.lexists(args.cyclebase):
+  #      parser.print_help()
+  #      raise runException(f'cycle base directory <{args.cyclebase}> not valid')
+
+  cyclebase = args.cyclebase
+  numcycles = args.cycle if args.run in (4,5,6) else 0
+
+  domains = NSSLDomains(0,cyclebase,numcycles)
+  if args.file is not None:
+      if os.path.lexists(args.file):
+          domains.parseTXT(args.file)
+      else:
+          parser.print_help()
+          raise runException(f'domain file <{args.file}> not exist')
+
+  #
+  # Positional arguments for wrkdir & wrktime may in any order
+  #
+
+  indir  = defaultwrkdir
+  if args.wrkdir is not None:
+      indir = args.wrkdir
+
+  if args.wrktime is None:
+      runstart = APSCase.findDefaultStartingTime(args.run)
+  else:
+      intime = APSCase.matchStartingTime(args.wrktime)
+      if intime is not None:
+          runstart = intime
+      else:
+          if args.wrkdir is None:
+               indir    = args.wrktime
+               runstart = APSCase.findDefaultStartingTime(args.run)
+          else:
+               intime = APSCase.matchStartingTime(args.wrkdir)
+               if intime is not None:
+                   runstart = intime
+                   indir    = args.wrktime
+               else:
+                   parser.print_help()
+                   raise runException(f'working time <{args.wrktime}> not in the right format')
+
+  if not os.path.lexists(indir):
+      parser.print_help()
+      raise runException(f'working directory <{indir}> not exist')
+
+  ##
+  ## Now, prepare for the return arguments in a dictionary
+  ##
+  argsdict = dict()
+  argsdict['wrkdir']    = indir
+  argsdict['starting']  = runstart
+  argsdict['runcase']   = args.run
+  argsdict['domains']   = domains
+  argsdict['conffile']  = args.conf
+
+  if cmd == 'clean.py':
+      _days  = args.days
+      argsdict['dirs']      = args.dirs
+  else:
+      argsdict['programs']  = args.program
+
+  return argsdict
+#enddef parseargv
+
+##%%%%%%%%%%%%%%%%%%%%%%%  main program here  %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+def main(conffile,starting,wrkdir,runcase,programs,domains) :
+  '''
+     main program driver layer
+     set namelist parameters and runtime environments
+     and trigue each workflow separately as a thread
+  '''
+  global _debug, _show
+
+  ## No user's changes from here
+  ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+  if not os.path.lexists(wrkdir) :
+    os.mkdir(wrkdir,755)
+
+  ## ---
+  ## 0 Initialize the case with date/time and other parameters
+  ##   Initialize the command configurator with wrkdir and distinguished time string
+  ## ---
+
+  ## Date and time
+
+  #rundate = starting.strftime("%04d-%02d-%02d_%02d:%02d:%02d")
+
+  wrkcase = APSCase(conffile,runcase,starting)
+
+  runstr  = wrkcase.getDistinguishTimeStr()
+
+  cmdconfig = Command.configurator(wrkdir,_show,_debug)
+
+  caseDir = work_dirs(wrkcase,cmdconfig,None,True)
+  cmdconfig.setuplog(caseDir,wrkcase.runname,runstr,_debug)
+
+  print (f"-------- Starting <{runstr}> at {time.strftime('%m-%d %H:%M:%S')} --------",file=sys.stderr)
+
+  stime = time.time()
+  cmdconfig.addlog(0,"main",f"--- Jobs {runstr} (runcase {runcase}) starting ...")
+  cmdconfig.addlog(0,"main",f"Script      - {os.path.realpath(__file__)}, JOBID:<{os.getpid()}>")
+  cmdconfig.addlog(0,"main",f"Config file - {os.path.realpath(conffile)}")
+
+  bucket = queue.Queue()
+
+  ## ---
+  ## Determine the domains to be run or anlyzed
+  ## ---
+
+  if len(domains) < 1:
+      fixedfile = os.path.join(wrkdir,'domain_control.fix')
+      if os.path.lexists(fixedfile):
+         #print ("*** Using domain from %s." % fixedfile,file=sys.stderr)
+         domains.parseTXT(fixedfile)
+      elif len(wrkcase.domains) > 0:
+         domains.parseDict(wrkcase.domains)
+      else:
+         cmdconfig.addlog(-1,"main",'''No domain is specified. Three ways to specify domain:
+         1: command line option (see -f);
+         2: file "domain_control.fix" in "%s";
+         3: in configuration file "%s".
+         '''%(wrkdir, conffile))
+  cmdconfig.addlog(0,"main",f"Domain file - {domains.source}")
+
+  domains.setAttrs(wrkcase.caseNo)
+
+  radconf = wrkcase.getObsConfig('radar')
+  radarinfo = os.path.join(wrkcase.rundirs.inputdir,radconf.radarinfo)
+  domains.setRadars(radarinfo)
+  # if provided, radars list in the configuration file will take precedence
+
+  ## ---
+  ## Start the workflow for each domain
+  ## ---
+
+  wrkflows = []
+  for domain in domains:
+
+    cmdconfig.addlog(0,"main",domain)
+    cmdconfig.addlog(0,"main","---------------------------------------")
+
+    ## ---
+    ## 1. Create thread object for each case
+    ## ---
+
+    wrkflow  = APSFlow(wrkcase, domain, cmdconfig, bucket, programs)
+
+    ## ---
+    ## 2. run each case
+    ## ---
+
+    wrkflow.start()
+    wrkflows.append(wrkflow)
+
+
+  ## ---
+  ## 3. finalize the script
+  ## ---
+
+  #-------------------------------------------------------------------
+  # Wait for all threads to end
+  #-------------------------------------------------------------------
+
+  #while threading.activeCount() > 1:
+  while True:
+    try :
+        exc = bucket.get(block=False)
+    except queue.Empty:
+        if threading.activeCount() <= 1: break
+    else:
+        cmdconfig.keep_waiting = False
+        for wrkflow in wrkflows:
+            if wrkflow.isAlive():
+                wrkflow.kill_received = True
+                wrkflow.join()
+        raise exc
+
+    for wrkflow in wrkflows:
+        if wrkflow.isAlive() : wrkflow.join(10)
+
+
+  ## ---
+  ## 4. Plot domains if required
+  ## ---
+  #if runcase in (1,3,4) and wrkcase.cmprun == 0:
+  #    plot_domains(wrkcase,cmdconfig,domains,False)
+
+  ## ---
+  ## 5. Finalize the job here
+  ## ---
+
+  etime = time.time()-stime
+  fh = (etime//3600)
+  fm = (etime % 3600 )//60
+  fs =  etime % 3600 - fm*60
+  cmdconfig.addlog(0,"main","Job finished and used %02dh %02dm %02ds" % ( fh,fm,fs))
+
+  cmdconfig.finalize()
+
+  print( "======== Done <%s> at %s ========\n" % (runstr,time.strftime('%m-%d %H:%M:%S')),file=sys.stderr)
+
+#enddef main
+
+##%%%%%%%%%%%%%%%%%%%%%%%  plot_domains  here  %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+def plot_domains(wrkcase,command,domains,wait) :
+
+     executable = os.path.join(command.fetchNCARGRoot(),'bin','ncl')
+     jconfs = wrkcase.getRuntimeConfig()
+
+     ##---------------- make working directory -------------------------
+
+     caseDir = work_dirs(wrkcase,command,None,False)
+     wrkdir = os.path.join(caseDir,'plotdomain')
+
+     if not os.path.lexists(wrkdir) :
+       os.mkdir(wrkdir)
+
+     ##---------------- Prepare WPS namelist file ----------------------
+
+     runDirs = wrkcase.rundirs
+
+     nmltmpl = os.path.join(runDirs.inputdir,'input','namelist.wps-V23')
+
+     parent_ratio = 3      # make parent domain to be 3 times larger than the first domain
+     nmlin = { 'e_we'      : domains[0].nx,
+               'e_sn'      : domains[0].ny,
+               'dx'        : domains[0].dx*parent_ratio,
+               'dy'        : domains[0].dy*parent_ratio,
+               'map_proj'  : domains[0].map_proj,
+               'ref_lat'   : domains[0].ctrlat,
+               'ref_lon'   : domains[0].ctrlon,
+               'truelat1'  : domains[0].truelat1,
+               'truelat2'  : domains[0].truelat2,
+               'stand_lon' : domains[0].standlon
+              }
+
+     nmlfile = os.path.join(wrkdir,'namelist.wps')
+
+     nmlgrp = namelist.decode_namelist_file(nmltmpl)
+     nmlgrp.merge(nmlin)
+     nmlgrp.writeToFile(nmlfile)
+     ##print "write to %s ..." % nmlfile
+     #if not os.path.lexists(nmlfile):
+     #   command.copyfile(nmltmpl,nmlfile)
+
+     ##---------------- Prepare NCL script file ------------------------
+
+     ncltmpl = os.path.join(runDirs.inputdir,'nclscripts','plotradars.ncl')
+     nclscpt = os.path.join(wrkdir,'plotradars.ncl')
+
+     #
+     # Create NCL scripts as needed
+     #
+     ncargroot = command.fetchNCARGRoot()
+
+     nclfile = open(nclscpt,'w')
+     nclstr  = '''
+          load "%(NCARG_ROOT)s/lib/ncarg/nclscripts/csm/gsn_code.ncl"
+          ;load "%(NCARG_ROOT)s/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
+          load "%(CUMTmpl)s/nclscripts/WRFUserARW.ncl"
+
+          begin
+
+          wks_type = "png"
+          wks_type@wkWidth  = 1024
+          wks_type@wkHeight = 1024
+          wks = gsn_open_wks(wks_type,"domains-000")
+
+     ''' % { 'NCARG_ROOT' : ncargroot,
+             'CUMTmpl'    : runDirs.inputdir
+             }
+     nclfile.write(command.trim(nclstr))
+
+     #
+     # get domains and radars
+     #
+     findradindoms = 0
+     maxrad        = 0
+     while findradindoms < len(domains):
+         command.addlog(0,"main",'*INFO*: Waiting for findradindoms = %d/%d.'%(findradindoms, len(domains)))
+         for domain in domains:
+             if command.showonly:
+                 findradindoms += 1
+                 maxrad = max(maxrad,len(domain['radars']))
+             else:
+                 if domain['search_done']:
+                     findradindoms += 1
+                     maxrad = max(maxrad,len(domain['usedradars']))
+         if findradindoms < len(domains): time.sleep(60)
+
+     nclfile.write('  domains = new((/%d,6/),float)\n'%len(domains))
+     nclfile.write('  numradars = %d\n'%maxrad )
+     if maxrad > 0:
+         nclfile.write('  latlons = new((/%d,%d,2/),float,-999.)\n'%(len(domains),maxrad))
+         nclfile.write('  radnams = new((/%d,%d/),string," ")\n'%(len(domains),maxrad))
+
+     #radlonex = re.compile(r'^ +lons = \(/([\d\s,.-]+) /\)$')
+     #radlatex = re.compile(r'^ +lats = \(/([\d\s,.-]+) /\)$')
+     #radarex  = re.compile(r'^ +\d{1,2}: ([A-Z ]+)$')
+
+     maxout = 0
+     for n,domain in enumerate(domains):
+         nclfile.write('  domains(%d,:) = (/ %10.4f, %10.4f, %d, %d, %10.2f, %10.2f /)\n'%(
+                                            n,domain['ctrlat'],domain['ctrlon'],
+                                            domain['nx'],domain['ny'],domain['dx'],domain['dy']))
+         command.addlog(0,"main",'*INFO*: Total radars: [%s]'% ','.join([radar.name for radar in domain['radars']]))
+         command.addlog(0,"main",'*INFO*: Used  radars: [%s]'% ','.join(domain['usedradars']))
+
+         j = 0
+         for radar in domain['radars']:
+             if command.showonly:
+                nclfile.write(f'  latlons({n},{j},:) = (/ {radar.lat}, {radar.lon} /) ; {radar.name}\n')
+                nclfile.write(f'  radnams({n},{j})   = "{radar.name}"\n' )
+                j += 1
+             else:
+                if radar.name in domain['usedradars']:
+                    nclfile.write(f'  latlons({n},{j},:) = (/ {radar.lat}, {radar.lon} /) ; {radar.name}\n')
+                    nclfile.write(f'  radnams({n},{j})   = "{radar.name}"\n' )
+                    j += 1
+                else:
+                    domain.outradars.append(radar)
+         maxout = max(maxout,len(domain.outradars))
+
+     nclfile.write('  ;radars outside of the domain\n')
+     nclfile.write(f'  latlons_out = new((/{len(domains)},{maxout},2/),float,-999.)\n')
+     nclfile.write(f'  radnams_out = new((/{len(domains)},{maxout}/),string," ")\n')
+     for n,domain in enumerate(domains):
+         for j,radar in enumerate(domain.outradars):
+             nclfile.write(f'  latlons_out({n},{j},:) = (/ {radar.lat}, {radar.lon} /) ; {radar.name}\n' )
+             nclfile.write(f'  radnams_out({n},{j})   = "{radar.name}"\n' )
+
+     nclfile.write( '  ;Ranges overlaped with the domain\n')
+     nclfile.write(f'  nranges = {len(domains[0].ranges)}\n')
+     nclfile.write(f'  latlons_rge = new((/{len(domains[0].ranges)},4/),float)\n')
+     for j,rge in enumerate(domains[0].ranges):
+         nclfile.write(f'  latlons_rge({j},:) = (/ {rge[1]}, {rge[2]}, {rge[3]}, {rge[4]} /)\n' )
+
+     #
+     # Copy other lines
+     #
+     with open(ncltmpl,'r') as ncltmph:
+       for line in ncltmph :
+         if line.startswith(';;;'): continue
+         nclfile.write(line)
+
+     nclfile.close()
+
+     ##---------------- Now, execute the ncl script --------------------
+
+     jobid = command.run_ncl_plt(executable,nclscpt,wrkdir,jconfs.nclplt)
+
+     if not command.wait_job('nclplt',jobid,wait) :
+          raise SystemExit()
+
+#enddef plot_domains
+
+####----------------------- case directory ---------------------------##
+
+def work_dirs(wrkcase,command,runtime=None,create=None):
+    '''
+       create = None    Do nothing, just return a directory string
+       create = True    Create the directory if it does not exists
+       create = False   Do not create, but hold the process until the
+                        directory is availabe
+    '''
+
+    casedir,timedir,_domndir = wrkcase.getCaseDir(0,runtime=runtime,rootdir=command.wrkdir)
+
+    if create is not None:
+        if not os.path.lexists(casedir):
+          try:
+            if create:
+                os.mkdir(casedir)
+            else:
+                command.wait_for_a_file('work_dirs/date',casedir,600,waittick=5,skipread=True)
+          except Exception:
+            pass
+
+    if create is not None:
+        if not os.path.lexists(timedir):
+          try:
+            if create:
+                os.mkdir(timedir)
+            else:
+                command.wait_for_a_file('work_dirs/time',timedir,600,waittick=5,skipread=True)
+          except Exception:
+            pass
+
+    return timedir
+#enddef work_dirs
+
+##%%%%%%%%%%%%%%%%%%%%%%%  clean program here  %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+def clean(starting,wrkdir,runcase,dirs=False):
+  '''
+     Clean working directory and files
+  '''
+
+  #import glob
+  import shutil
+
+  global _debug, _show, _days
+
+  ##--------------------------------------------------------------------
+  ## user's configuration below
+
+  #if not dirs :
+  #  casdirs = ['getmaxref', 'plotdomain', 'ungrib', 'dom??' ]
+  #  domdirs = ['geogrid',  'getradar',  'metgrid',  'nclscripts'
+  #             'news3dvar', 'radremap',  'real',  'tinterp',  'wrf']
+  #  ## keeep outimages
+  #  files = {'news3dvar' : ['*.output', '*.input','*.qsub',
+  #                         '*.err','*.out','*.bsub',
+  #                         '*.lst','*.lso','*.pro','*.lsq','*.sqc',
+  #                         '*.sound','*.adasstat', '*.adasstn'
+  #                         ],
+  #           'extsnd'   : ['*.output','*.input','*.qsub','*.out'],
+  #           'postprd'  : ['*.output','*.qsub','*.out', '*.dat',
+  #                         '*.xml', 'itag', 'fort.*'
+  #                         ],
+  #          }
+  #else :
+  #  casdirs = ','.split(dirs)
+  #  files   = { }
+
+  ## No user's changes from here
+  ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+  if not os.path.lexists(wrkdir) :
+    print ('Working directory (%s) is not found.' % wrkdir)
+    return
+
+  ## ---
+  ## 0 General configuration parameters
+  ## ---
+
+  ## Date and time
+
+  beginTime = starting
+  if _days < 0:
+    beginTime = beginTime + timedelta(days=_days)
+    _days = 1
+
+  delTime = timedelta(hours=24)
+
+  beginTime = beginTime - timedelta(days=_days)
+  endTime   = beginTime - timedelta(days=10)
+
+  currTime = beginTime
+  while currTime >= endTime :
+
+    wrkcase = APSCase('config.yaml',runcase,currTime)
+
+    ## case directory
+
+    (caseroot,_caserel,_casedom) = wrkcase.getCaseDir(0)
+    casedir = os.path.join(wrkdir,caseroot)
+
+    if _show: print ('Checking <%s> in "%s" ...' % (caseroot, wrkdir))
+    if os.path.exists(casedir):
+      print ('Deleting <%s> ...' % (casedir))
+      if not _show: shutil.rmtree(casedir)
+
+    ###if _show: print 'Checking directories/files in "%s" ...' % (casedir)
+    ###if os.path.lexists(casedir) :
+    ###
+    ###  ## remove complete directory
+    ###  for odir in dirs :
+    ###    obsdir = os.path.join(casedir,odir)
+    ###    if os.path.lexists(obsdir) :
+    ###      if _show: print 'Deleting <%s> in "%s" ...' % (odir, casedir)
+    ###      if not _show: shutil.rmtree(obsdir)
+    ###
+    ###  ## remove working files in directory
+    ###  for odir in files.keys() :
+    ###    for ofile in files[odir] :
+    ###      if ofile.find('*')>=0 or ofile.find('?') >= 0 :
+    ###        subdir = os.path.join(casedir,odir,ofile)
+    ###        filelist = glob.glob( subdir )
+    ###        if len(filelist) > 0 and _show: print 'Deleting <%s> ...' %(subdir,)
+    ###        for efile in filelist :
+    ###          if os.path.lexists(efile) :
+    ###            if not _show: os.unlink(efile)
+    ###      else :
+    ###        obsfile = os.path.join(casedir,odir,ofile)
+    ###        if os.path.lexists(obsfile) :
+    ###          if _show: print 'Deleting <%s> ...' %(obsfile,)
+    ###          if not _show: os.unlink(obsfile)
+    ###
+    #
+    # Remove log file
+    #
+    #timstr = wrkcase.getDistinguishTimeStr()
+    #cmdconfig = Command.configurator(wrkdir,_show,_debug)
+    #cmdconfig.deletelogfile()
+
+    currTime = currTime-delTime
+
+  ## ---
+  ## finalize the script
+  ## ---
+
+#enddef clean
+
+#############################  Portral   ###############################
+if __name__ == "__main__":
+
+##----------------------------------------------------------------------
+##
+## Global variables are:  _debug, _show, cmd
+##
+## Argument dictionary:
+##
+##   keys            Values
+##   -------------   --------------------------
+##   show            do not run
+##   starting        Datetime object of this case
+##
+##----------------------------------------------------------------------
+
+    ##- to import proper Command module
+    import socket
+
+    hostname = socket.gethostname()
+    for host in ( 'odin','schooner', 'kraken', 'stampede' ) :
+      if hostname.find(host) >= 0:
+        cmdmodule = 'Command_%s' % host.capitalize()
+        ##print "Importing %s ..." % (cmdmodule)
+        exec ('import %s as Command' % cmdmodule)
+        break
+    else :
+      #print ("Importing Command_Shell ...")
+      import Command_Vecna as Command
+
+    ##- start the jobs now
+    _debug   = False
+    _show    = False
+    _days    = 1
+
+    cmd  = os.path.basename(sys.argv[0])
+
+    try:
+      argsdicts = parseargv()
+
+      if cmd == 'clean.py' :
+        clean(**argsdicts)
+      else :
+        main(**argsdicts)
+    except runException as ex:   # only catch runException, other exception will print callstack
+        print(f"\nERROR: {ex.message}.\n",file=sys.stderr)
+    #except Exception as ex:
+    #    print(f"\n{ex}.\n",file=sys.stderr)

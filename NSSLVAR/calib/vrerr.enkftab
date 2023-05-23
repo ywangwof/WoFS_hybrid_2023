@@ -1,0 +1,11 @@
+NWS WSR-88D Vr error threshold for QC in EnKF
+    AGL    error
+   3000.     20.
+   6000.     40.
+   8000.     60.
+  16000.     60.
+  20000.     60.
+
+NOTE] DON'T CHANGE THE FORMAT. 
+      DON'T ADD OR DELETE A ROW IN THE TABLE.
+      BUT USER CAN CHANGE VALUES IN THE TABLE (AGL AND/OR error).

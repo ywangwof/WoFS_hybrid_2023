@@ -1,0 +1,227 @@
+!
+!   ##################################################################
+!   ##################################################################
+!   ######                                                      ######
+!   ######         INPUT FILE FOR PROGRAM WRFHYBRID             ######
+!   ######                                                      ######
+!   ######                     Developed by                     ######
+!   ######       National Severe Storm Laboratory, NOAA         ######
+!   ######                                                      ######
+!   ##################################################################
+!   ##################################################################
+!
+*-----------------------------------------------------------------------
+!
+!  This file contains run-time parameters for program WRFHYBRID which
+!  compute ensember spread given a set of WRF netCDF files.
+!
+!                                                                    =*
+*-----------------------------------------------------------------------
+!
+! Author: Yunheng Wang (04/29/2016)
+!    Prepared for a hyrbid gain EnDA experiments
+!
+! Modification history:
+!
+!                                                                    =*
+*-----------------------------------------------------------------------
+!
+!  Message passing namelist
+!
+!  nproc_x     : processor number in X direction
+!  nproc_y     : processor number in Y direction
+!
+!  nproc_x_in    Number of input patches in x-direction
+!  nproc_y_in    Number of input patches in y-direction
+!
+!         NOTE: Must be either 1 or nproc_x/nproc_y at present
+!
+!
+!---------------------------------------------------------------------=*
+
+ &message_passing
+   mpimode = 1,
+   nproc_x = 1,
+   nproc_y = 1,
+
+   nproc_x_in = 1,
+   nproc_y_in = 1,
+ /
+
+*-----------------------------------------------------------------------
+!
+! Program working mode
+!
+! program_mode    Recenter ensember members
+!               = 1, Recenter ensember members based on a deterministic input
+!               = 0, Computer ensember mean only, so WRF deterministic
+!                    input is not used.
+! alpha           Hybrid weight for ensemble mean
+!
+!---------------------------------------------------------------------=*
+
+ &progmod
+   program_mode = 0,
+   alpha        = 0.5,
+   icontrol     = 1,
+   nvariables   = 12,
+   variables = 'PH', 'U', 'V', 'W', 'T', 'QVAPOR', 'QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP', 'QHAIL',
+   varstag = 'Z', 'X', 'Y', 'Z', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+
+ /
+
+*-----------------------------------------------------------------------
+!
+! WRF input files for ensemble members
+!
+!   dir_extm             The directory that contains the WRF data
+!                        files that are to be processed.
+!
+!            It accepts two patterns for reading input files from individual
+!            folders. One is to read saparate diretory for each forecast time
+!            in seconds. For example,
+!              dirname = './data%9T',
+!            The program will read from the following directories:
+!              './data003600.00', './data007200.00', ...
+!
+!            One pattern for ensemble member is.
+!              dirname = './EN%3N',
+!            The program will read the following directories for each
+!            ensemble member:
+!              './EN001', './EN002', ...,'./EN010', ... etc.
+!
+!            Another pattern for ensemble member.
+!              dirname = './EN%0N',
+!            The program will read the following directories for each
+!            ensemble member:
+!              './EN1', './EN2', ...,'./EN10', , ... etc.
+!
+!   filename_convention_m  How to construct the file name
+!                      = 0, WRF history output (ARW), 'wrfout_d01_YYYY-MM-DD_HH:MM:SS[_xxxx]'
+!                      = 1, WRF restart output (ARW), 'wrfrst_d01_YYYY-MM-DD_HH:MM:SS[_xxxx]'
+!                      = 2, WRF input file     (ARW), 'wrfinput_d01[_xxxx]'
+!                      = 3, WPS metgrid output (ARW), 'met_em.d01.YYYY-MM-DD_HH:MM:SS.nc[_xxxx]'
+!                      = 5, WRF history output (NMM), 'wrfout_d01_YYYY-MM-DD_HH:MM:SS[_xxxx]'
+!                      = 6, WPS metgrid output (NMM), 'met_nmm.d01.YYYY-MM-DD_HH:MM:SS.nc[_xxxx]'
+!                      = 9, Other WRF-format file, needs 'filename_header'.
+!
+!   init_time_str_m        WRF model initial time string as:
+!                        'YYYY-MM-DD_HH:MM:SS'
+!
+!   io_form_m              WRF history data format
+!                        = 7, NetCDF format, only one that is supported.
+!
+!   start_time_str_m:      WRF history started time string as:
+!                        'YYYY-MM-DD_HH:MM:SS'
+!   history_interval_m:    WRF history dump interval string as:
+!                        'DD_HH:MM:SS'
+!   end_time_str_m:        WRF history ended time string.
+!
+!     NOTE: if you are converting all WRF history dumps at one time,
+!          start_time_str should be the same as init_time_str. On
+!          the other hand, if the WRF history dumps is converting
+!          one by one, start_time_str is the same as end_time_str and
+!          init_time_str should be the start time of the WRF model.
+!
+!   magnitude_processor_m Magnitude of the number processors for split WRF
+!                files. The parameter was added for CAPS spring 2010
+!                experiments where we had used 14,400 processors on Athena
+!                for 1km experiments, which is larger than 10,000 - the maximum
+!                allowable in the WRF system. So the file appendix must be
+!                5 digits in length instead of the default 4.
+!          = 4, (default)
+!          = 5, for 5 digits appendix with WRF/METO split files
+!
+!
+!---------------------------------------------------------------------=*
+
+ &wrfmfile
+   nen                      = 36,
+   dir_extm                 = '/scratch/ywang/test_runs/WOF2016/20160509/advance_temp%0N',
+   filename_convention_m    = 2,
+   filename_append_member_m = 2,  
+   init_time_str_m          = '2016-05-09_19:45:00',
+
+   io_form_m                = 7,
+   grid_id_m                = 1,
+   magnitude_processor_m    = 5,
+ 
+   start_time_str_m         = '2016-05-09_20:00:00',
+   history_interval_m       =         '00_00:15:00',
+   end_time_str_m           = '2016-05-09_20:00:00',
+ /
+
+*-----------------------------------------------------------------------
+!
+! WRF input files for deterministic member
+!
+!   dir_extd             The directory that contains the WRF data
+!                        files that are to be processed.
+!
+!   filename_convention_d  How to construct the file name
+!                      = 0, WRF history output (ARW), 'wrfout_d01_YYYY-MM-DD_HH:MM:SS[_xxxx]'
+!                      = 1, WRF restart output (ARW), 'wrfrst_d01_YYYY-MM-DD_HH:MM:SS[_xxxx]'
+!                      = 2, WRF input file     (ARW), 'wrfinput_d01[_xxxx]'
+!                      = 3, WPS metgrid output (ARW), 'met_em.d01.YYYY-MM-DD_HH:MM:SS.nc[_xxxx]'
+!                      = 5, WRF history output (NMM), 'wrfout_d01_YYYY-MM-DD_HH:MM:SS[_xxxx]'
+!                      = 6, WPS metgrid output (NMM), 'met_nmm.d01.YYYY-MM-DD_HH:MM:SS.nc[_xxxx]'
+!                      = 9, Other WRF-format file, needs 'filename_header'.
+!
+!   init_time_str_d      WRF model initial time string as:
+!                        'YYYY-MM-DD_HH:MM:SS'
+!
+!   io_form_d            WRF history data format
+!                        = 7, NetCDF format, only one that is supported.
+!
+!   magnitude_processor_d Magnitude of the number processors for split WRF
+!                files. The parameter was added for CAPS spring 2010
+!                experiments where we had used 14,400 processors on Athena
+!                for 1km experiments, which is larger than 10,000 - the maximum
+!                allowable in the WRF system. So the file appendix must be
+!                5 digits in length instead of the default 4.
+!          = 4, (default)
+!          = 5, for 5 digits appendix with WRF/METO split files
+!
+!
+!---------------------------------------------------------------------=*
+
+ &wrfdfile
+   dir_extd                 = './dir_3dvar',
+   filename_convention_d    = 2,
+
+   io_form_d                = 7,
+   grid_id_d                = 1,
+   magnitude_processor_d    = 5,
+ /
+
+*-----------------------------------------------------------------------
+!
+!  Data output control parameters.
+!
+!  outdir             Data file output directory
+!
+!  out_join_patches   Joins WRF patches into one file. Otherwise, dump
+!                     split WRF files with patch number equal to nproc_x*nproc_y
+!
+!  out_bkg_mean       Write out computed member mean in 'outdir'.
+!  out_recenter_mean  Write out the recentered mean in 'outdir'.
+!  out_members_new    Write out the recentered members in a set of new files
+!                     Otherwise, the original member files will be overwritten
+!
+!  lvldbg             Program debugging
+!
+!---------------------------------------------------------------------=*
+
+ &output
+
+   outdir           = './dart_mem%3N',
+
+   out_join_patches  = .TRUE.,
+   out_bkg_mean      = .TRUE.,
+   out_rct_mean      = .FALSE.,
+   out_memb_new      = .FALSE.,
+
+   filename_append_member_o = 1,
+
+   lvldbg           = 0,
+ /

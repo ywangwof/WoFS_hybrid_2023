@@ -1,0 +1,9 @@
+! Calibration constants for GOES-12 Channel-4 10 micron
+!
+! http://cimss.ssec.wisc.edu/goes/calibration/
+! updated 12/1/2012
+! 
+! Center 
+! Wavenumber  fk1          fk2         bc1       bc2
+!
+ 933.4076  0.96859E+04  0.13430E+04  0.37554  0.99872

@@ -1,0 +1,129 @@
+#!/bin/bash
+
+rundir="/scratch/ywang/test_runs/hyb3.0km"
+rundir="/scratch/ywang/real_runs"
+
+eventdate=0
+eventtime=0
+nxproc=0
+nyproc=0
+
+while [[ $# > 0 ]]; do
+    key="$1"
+
+    if [[ $key =~ ^[0-9]{8}$ ]]; then
+        eventdate=$key
+    elif [[ $key =~ ^[0-9]{4}$ ]]; then
+        eventtime=$key
+    elif [[ -d $key ]]; then
+        rundir=$key
+    else
+        echo "Unknown option: $key"
+        exit 1
+    fi
+    shift
+done
+
+if [[ $eventdate -eq 0 ]]; then
+    if [[ $(date +%H) -le 15 ]]; then
+        eventdate=$(date -d "1 day ago" +%Y%m%d)
+    else
+        eventdate=$(date +%Y%m%d)
+    fi
+fi
+
+if [[ "$eventtime" == "0" ]]; then
+    eventtimes=()
+    starttime=1500
+    for ((datime=0;datime<=720;datime+=15)); do
+        ctime=$(date -d "$eventdate $starttime $datime minute" +%H%M)
+        eventtimes+=($ctime)
+    done
+else
+    eventtimes=($eventtime)
+fi
+
+for eventtime in ${eventtimes[@]}; do
+    varstatus=0
+    wrfstatus=0
+
+    if [[ $eventtime == "1500" ]]; then
+        varfile="$rundir/$eventdate/${eventtime}Z/dom00/news3dvar/n3dvar1_${eventtime}.output"
+        logfile="$rundir/$eventdate/${eventtime}Z/nsslvar-${eventdate}_${eventtime}.log"
+        errfile="$rundir/$eventdate/${eventtime}Z/dom00/wrf1/rsl.error.0000"
+        errfile5="$rundir/$eventdate/${eventtime}Z/dom00/wrf1/rsl.error.0000"
+    elif [[ $eventtime -lt "1500" ]]; then
+        rundate=$(date -d "$eventdate 1 day" +%Y%m%d)
+        varfile="$rundir/$eventdate/${eventtime}Z/dom20/news3dvar/n3dvar4_${eventtime}.output"
+        logfile="$rundir/$eventdate/${eventtime}Z/nsslcyla-${rundate}_${eventtime}.log"
+        errfile="$rundir/$eventdate/${eventtime}Z/dom20/wrf4/rsl.error.0000"
+        errfile5="$rundir/$eventdate/${eventtime}Z/dom20/wrf5/rsl.error.0000"
+    else
+        varfile="$rundir/$eventdate/${eventtime}Z/dom20/news3dvar/n3dvar4_${eventtime}.output"
+        logfile="$rundir/$eventdate/${eventtime}Z/nsslcyla-${eventdate}_${eventtime}.log"
+        errfile="$rundir/$eventdate/${eventtime}Z/dom20/wrf4/rsl.error.0000"
+        errfile5="$rundir/$eventdate/${eventtime}Z/dom20/wrf5/rsl.error.0000"
+    fi
+
+    if [[ ! -r $varfile ]]; then
+        echo "ERROR: file \"$varfile\" not exist"
+        varstatus=1
+        break
+        #tail -10 $logfile
+        #exit 1
+    fi
+
+    # check NEWSVAR run
+    tag=$( tail -n 1 $varfile )
+    if [[ "$tag" =~ " news3dvar_MPI terminated normally" ]]; then
+        echo -n "$rundir/$eventdate/${eventtime}Z NEWS3DVAR done successfully,"
+        if [[ ! -r $errfile ]]; then
+            if [[ -r $errfile5 ]]; then
+                errfile=$errfile5
+            else
+                echo " WRF not available"
+                wrfstatus=1
+                break
+                #exit 0
+            fi
+        fi
+
+        # check WRF4/WRF5 run
+        tag=$( tail -n 1 $errfile )
+        if [[ "$tag" =~ " wrf: SUCCESS COMPLETE WRF" ]]; then
+            echo " WRF done successfully."
+            #exit 0
+        else
+            wrfstatus=1
+            echo "WRF failed *****"
+            break
+        fi
+    else
+        varstatus=1
+        break
+    fi
+
+    #tail -10 $logfile
+    #tail -20 $varfile
+done
+
+if [[ $varstatus -ne 0 ]]; then
+    if [[ -r $varfile ]]; then
+        echo "==== $varfile ===="
+        tail -20 $varfile
+    elif [[ -r $logfile ]]; then
+        echo "==== $logfile ===="
+        tail -10 $logfile
+    fi
+fi
+
+if [[ $wrfstatus -ne 0 ]]; then
+    if [[ -r $errfile ]]; then
+        echo "==== $errfile ===="
+        tail -10 $errfile
+    elif [[ -r $logfile ]]; then
+        echo "==== $logfile ===="
+        tail -10 $logfile
+    fi
+fi
+exit 0

@@ -1,0 +1,8 @@
+
+ &iosetup
+  nmem = 36,
+  infilename='./diag_goes_img_g13_ges.mem',
+  num_digit_in_filename = 3,
+  outfilename='./diag_goes_img_g13_ges.ensmean',
+ /
+

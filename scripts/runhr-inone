@@ -1,0 +1,375 @@
+#!/bin/bash
+
+config() {
+    python3 -c "import yaml;print(yaml.safe_load(open('$1'))$2)"
+}
+
+scpdir=$(dirname $0)       # To ensure to use the same dir as this script
+#scpdir="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+rundir="/scratch/ywang/test_runs/hyb23"
+
+function usage {
+    echo " "
+    echo "    USAGE: $0 [options] [DATETIME] RUNDIR"
+    echo " "
+    echo "    PURPOSE: Run realtime hybrid analysis cycle in one script."
+    echo " "
+    echo "    DATETIME - Case date and time in YYYYmmdd or YYYYmmddHHMM"
+    echo "    RUNDIR   - Work Directory"
+    echo " "
+    echo "    OPTIONS:"
+    echo "              -h              Display this message"
+    echo "              -n              Show command to be run only"
+    echo "              -nn             Pass show command to nsslvar.py"
+    echo "              -v              Verbose mode"
+    echo "              -p   0/1/2/3    Perturbation flag"
+    echo "                              0: no perturbation (default)"
+    echo "                              1: Perturbation but run spin-up forecast only"
+    echo "                              2: Run cycled analysis and forecast, supposed perturbation spinup is done beforehand"
+    echo "                              3: Run step 1 & 2 together"
+    echo "              -s   0 or 0,4   Starting (and ending) cycle number, do not include end cycle"
+    echo "                   or +4      End cycle number is starting number plus this number"
+    echo "              -c   confl      File to specify configuration"
+    echo "              -d   domfl      File to specify domain"
+    echo " "
+    echo "   DEFAULTS:"
+    echo "              scpdir = $scpdir"
+    echo "              rundir = $rundir"
+    echo " "
+    echo "                                     -- By Y. Wang (2022.07.22)"
+    echo " "
+    exit $1
+}
+
+#
+# Extract NEWS-e attributes
+#
+function ncattget {
+  #ncks -m -M $1 | grep -E "^Global attribute [0-9]+: (CEN_LAT|CEN_LON|TRUELAT1|TRUELAT2|STAND_LON)" | cut -f 4,11 -d ' '
+  /scratch/software/Odin/python/anaconda2/bin/ncks -x -M $1 | grep -E "(WEST-EAST_GRID_DIMENSION|SOUTH-NORTH_GRID_DIMENSION|CEN_LAT|CEN_LON|TRUELAT1|TRUELAT2|STAND_LON)"
+}
+
+function create_domfl {
+
+  echo "Domain file <$domfl> not exist, trying to create ..."
+  startdt=$(date -d "$eventdt ${starth}" +%Y-%m-%d_%H:%M:%S)
+  newsefile="/scratch/wof/realtime/$eventdt/ic1/wrfinput_d01_ic"
+  #newsefile="/scratch/ywang/saved_data/NEWSe2018/$eventdt/WRFOUT/wrffcst_d01_${startdt}_1"
+  #echo $newsefile
+
+  #
+  # Wait for NEWS-e file
+  #
+  if [[ ! -e "$newsefile" ]]; then
+    echo "File <$newsefile> not exist."
+    exit
+  fi
+
+    domains=$(ncattget $newsefile)
+
+    IFS=$'\n' domelements=($domains)
+    for var in ${domelements[@]}; do
+      IFS='= ' keyval=(${var##Global attribute *:})
+      wrfkey=${keyval[0]%%,}
+      val=${keyval[-1]}
+
+      case $wrfkey in
+        WEST-EAST_GRID_DIMENSION)
+          key="nx1"
+          ;;
+        SOUTH-NORTH_GRID_DIMENSION)
+          key="ny1"
+          ;;
+        *)
+          key=${wrfkey}
+          ;;
+      esac
+      declare "$key=$val"
+      echo "$key -> $val"
+    done
+
+    #
+    # determine nprocx
+    #
+    let nx=(${nx1}-1)*2+1
+    let ny=(${ny1}-1)*2+1
+    let nprocx=15
+    let modnx=($nx-1)%${nprocx}
+    let modnx1=($nx1-1)%${nprocx}
+    if [[ $modnx != 0 || $modnx1 != 0 ]]; then
+      echo "$nx or $nx1 is not whole division by $nprocx."
+      #let nprocx=20
+      #let modnx=($nx-1)%${nprocx}
+      #if [[ $modnx != 0 ]]; then
+      #  echo "$nx is also not whole division by $nprocx."
+      #  exit
+      #fi
+      exit
+    fi
+
+    echo "${nx},${ny},1500.0,1500.0,${CEN_LAT},${CEN_LON},${TRUELAT1},${TRUELAT2},${STAND_LON}" > $domfl
+}
+
+#-----------------------------------------------------------------------
+#
+# Default values
+#
+#-----------------------------------------------------------------------
+
+show=0
+verb="-v"
+confl="$scpdir/config23_hyb.yaml"
+domfl="domain_control.fix"
+
+startcount=0
+endcount=100
+
+perturbflag=0   # with ensemble perturbation
+norun=""
+eventime=""
+
+#-----------------------------------------------------------------------
+#
+# Handle command line arguments
+#
+#-----------------------------------------------------------------------
+
+while [[ $# > 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        -h)
+            usage 0
+            ;;
+        -n)
+            show=1
+            ;;
+        -nn)
+            norun="-n"
+            ;;
+        -v)
+            verb="-v"
+            ;;
+        -p)
+            perturbflag="$2"
+            shift
+            ;;
+        -s)
+            if [[ $2 =~ ^[0-9]{1,},[0-9]{1,}$ ]]; then
+                IFS=','; arr=($2); unset IFS;
+                startcount="${arr[0]}"
+                endcount="${arr[1]}"
+            elif [[ $2 =~ ^[0-9]{1,}$ ]]; then
+                startcount="${2}"
+            elif [[ $2 =~ ^\+[0-9]{1,}$ ]]; then
+                endcount="${2}"
+            else
+                echo ""
+                echo "ERROR: Wrong number for starting cycle number, get [$2]."
+                usage -1
+            fi
+            shift      # past argument
+            ;;
+        -c)
+            confl="$2"
+            shift      # past argument
+            ;;
+        -d)
+            domfl="$2"
+            shift      # past argument
+            ;;
+        -*)
+            echo "Unknown option: $key"
+            exit
+            ;;
+        *)
+            if [[ $key =~ ^[0-9]{8}$ ]]; then
+                eventdt="$key"
+            elif [[ $key =~ ^[0-9]{12}$ ]]; then
+                eventdt="${key:0:8}"
+                eventime="$key"
+            elif [[ -d $key ]]; then
+                rundir=$key
+            else
+                echo ""
+                echo "ERROR: unknown option, get [$key]."
+                usage -2
+            fi
+            ;;
+    esac
+    shift # past argument or value
+done
+
+if [[ ! $eventdt =~ ^[0-9]{8}$ ]]; then
+  echo "ERROR: event date is not in right format: $evendt"
+  usage -2
+fi
+
+if [[ ! $perturbflag =~ ^[0-3]{1}$ ]]; then
+  echo "ERROR: perturbation flat is not righ: $perturbflag"
+  usage -2
+fi
+
+nens=$(config $confl "['nens']")
+ntimesample=$(config $confl "['ntimesample']")
+timesamin=$(config $confl "['timesamin']")
+domains=$(config $confl "['domains']")
+
+#-----------------------------------------------------------------------
+#
+# set default values
+#
+#-----------------------------------------------------------------------
+
+starth=$(config $confl "['wofstarthour']")
+
+if [[ $eventime =~ ^[0-9]{12}$ ]]; then
+    if [[ ${eventime:8:2} -lt $starth ]]; then
+        eventdt=$(date -d "${eventime:0:8} 1 day ago" +%Y%m%d)
+    fi
+fi
+
+starts=$(date -d "$eventdt ${starth}00" +%s)
+ends=$(date -d "$eventdt 0300 1 day" +%s)
+
+# modify startcount based on eventime from argument
+if [[ $eventime =~ ^[0-9]{12}$ ]]; then
+    scounts=$(date -d "${eventime:0:8} ${eventime:8:4}" +%s)
+    startcount=$(( (scounts-starts)/900 ))
+    if [[ $show -eq 1 && ! $endcount =~ ^\+[0-9]{1,}$ ]]; then
+        endcount=$(( startcount+1 ))
+    fi
+fi
+
+# modify endcount based on startcount
+if [[ $endcount =~ ^\+[0-9]{1,}$ ]]; then
+    enum=${endcount#+}
+    endcount=$(( startcount+enum ))
+fi
+
+usedomfl=0
+if [[ $domains == "[]" ]]; then
+    usedomfl=1
+    if [[ ! -r $domfl ]]; then
+        domfl="$rundir/${eventdt}.dom"
+        if [[ ! -r $domfl ]]; then
+            create_domfl
+        fi
+    fi
+else
+    domfl=${domains}
+fi
+
+if [[ $show -eq 1 ]]; then
+  echo "Domain file: ${domfl}"
+  echo "Config file: ${confl}"
+fi
+
+#-----------------------------------------------------------------------
+#
+# ensemble perturbation spin up
+#
+#-----------------------------------------------------------------------
+
+if [[ $perturbflag -eq 1 || $perturbflag -eq 3 ]]; then
+  dttime=$(date -d "$eventdt 1800" +%Y%m%d%H%M)
+  cmdspin="${scpdir}/nsslvar.py -r 3 -v -c $confcst $norun $dttime $rundir"
+  if [[ $usedomfl -eq 1 ]]; then
+      cmdspin+=" -f $domfl"
+  fi
+  echo $cmdspin
+  if [[ $show -ne 1 ]]; then
+     $cmdspin
+  fi
+
+  if [[ $perturbflag -eq 1 ]]; then
+    exit 0
+  fi
+fi
+
+#-----------------------------------------------------------------------
+#
+# Loop over starts to ends
+#
+#-----------------------------------------------------------------------
+
+echo $starts, $ends, $startcount, $endcount
+let count=0
+for ((i=$starts; i<=$ends; i+=900))
+do
+  dttime=$(date -d @$i +%Y%m%d%H%M)
+  ddate=$(date -d @$i +%Y%m%d)
+  dtime=$(date -d @$i +%H%M)
+
+  casedir=$rundir/$ddate/${dtime}Z
+  mins=$(date -d @$i +%M)
+  if [[ $mins -eq 0 ]]; then     # top hour
+    let j=$starts                # top use basedir for retrieving geogrid run
+  else
+    let j=$i-$mins*60            # other time use basedir for retrieving ungrib run
+    #dtime1=$(date -d @$j +%H%M)
+  fi
+  dtime1=$(date -d @$j +%H%M)
+
+  if [[ $count -lt $startcount ]]; then
+    let count++
+    continue
+  fi
+
+  cyclebase="-b $rundir/$eventdt/${dtime1}Z"
+
+  vircount=$count
+  if [[ $perturbflag -eq 2 || $perturbflag -eq 3 ]]; then
+      if [[ $count -lt 1 ]]; then
+          vircount=$((count+901))
+          cyclebase=""
+      else
+          vircount=$((count+1))
+      fi
+  fi
+
+  if [[ $show -eq 1 ]]; then
+    echo " "
+    echo "CYCLE: $count at $dttime ......"
+  fi
+
+  runopts="-l $vircount $verb -c $confl $norun"
+  if [[ $usedomfl -eq 1 ]]; then
+      runopts+=" -f $domfl"
+  fi
+
+  if [[ $vircount -lt 1 ]]; then
+    cmdanal="${scpdir}/nsslvar.py -r 1 $runopts $dttime $rundir"
+    echo $cmdanal
+    if [[ $show -ne 1 ]]; then
+      $cmdanal
+    fi
+
+    cmdfcst="${scpdir}/nsslvar.py -r 2 $runopts $dttime $rundir"
+    echo $cmdfcst
+    if [[ $show -ne 1 ]]; then
+      $cmdfcst
+    fi
+  else
+    cmdanal="${scpdir}/nsslvar.py -r 4 $runopts $cyclebase $dttime $rundir"
+    echo $cmdanal
+    if [[ $show -ne 1 ]]; then
+      $cmdanal
+    fi
+
+    if [[ $i -lt $ends ]]; then
+      cmdfcst="${scpdir}/nsslvar.py -r 5 $runopts $cyclebase $dttime $rundir"
+      echo $cmdfcst
+      if [[ $show -ne 1 ]]; then
+        $cmdfcst
+      fi
+    fi
+  fi
+
+  let count++
+
+  if [[ $count -ge $endcount ]]; then
+    exit 0
+  fi
+done

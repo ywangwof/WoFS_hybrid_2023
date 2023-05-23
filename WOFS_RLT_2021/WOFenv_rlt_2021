@@ -1,0 +1,8 @@
+#setenv event `date -d '9 hours ago' +%Y%m%d`
+setenv event 20220520
+
+setenv CENTRALDIR  /home/wofuser/WOFS
+setenv SCRIPTDIR   /scratch/ywang/NEWSVAR/news3dvar.2023/WOFS_RLT_2021/scripts
+setenv TOP_DIR     /scratch/ywang/test_runs/hyb23/wofs_run
+setenv RUNDIR      ${TOP_DIR}/${event}
+

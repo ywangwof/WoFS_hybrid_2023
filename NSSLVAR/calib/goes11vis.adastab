@@ -1,0 +1,9 @@
+! Calibration constants for GOES-11 Visible Channel
+! Using GOES-11 launch date and dim rate estimated from GOES-10
+! http://www.oso.noaa.gov/goes/goes-calibration/vicarious-calibration.htm
+! As of 11 March 2003
+! 
+! Launch
+! Date      Day 0 Cal  Dim Rate (per day)
+!
+'2000-05-03'  1.049    0.0001022

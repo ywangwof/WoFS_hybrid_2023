@@ -1,0 +1,295 @@
+## ---------------------------------------------------------------------
+##
+## This is the Configure file
+##
+## ---------------------------------------------------------------------
+##
+## HISTORY:
+##
+##   Yunheng Wang (03/03/2020)
+##   Initial version converted from nsslconf.py
+##
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+# [general]
+runname  : 'nssl'
+domains  : [ ]    # empty - to be specified with domain file later
+radars   : [ ]    # radar to be analysis, if empty, they will be determined from radarinfo base on the domain size
+
+hybrid      : 0.5       # hybrid coefficient ( 0- no hybrid, > 100.0 use real runs for hybrid members)
+wofstarthour: 15
+
+nens        : Null     # 3DEnVAR ensemble number
+ntimesample : 1
+timesamin   : 5         # 5-minutes of time sample WRF output
+
+cmprun      : 0         # A comparison run, the base run directory is "cmpdir"
+                        # it must be at the same domain and run the same times as the base run.
+                        # it will use the same observations as the base run. No observation preprocessing again.
+                        # 0    - not an accompany run
+                        # 1/-1 - Use the same observations as base run, -1 at different domain
+                        # 2    - Use new sets of observations
+                        # -2   - Use same radar observations only
+
+            # 1    2     3     4    5     6      7     27
+# forecast length in seconds for each runcase
+fcstlngth : [900, 900, 10800, 900, 900, 10800, 21600, 900]
+# forecast file output interval in seconds
+outint    : [900, 900,   900, 900, 900,   900,   900, 900]
+
+# Avoid running WRFDAUPDATE as possible
+# The run-time script will reverse this option if conditions are not satified
+# The conditions are:
+#  1. hdmpfmt = 1 for news3dvar
+#
+# Note that this option may cause big difference in WRF fields especially
+# within the boundary zone.
+#
+skipwrfdaupdate : False
+
+# [external dataset]
+
+extsrcs: ['HRRRE','HRRRX']
+
+# Configuration for each data source list above
+extconfs:
+  HRRRE:
+    extintvals : [6,1]    # update frequency in hours and file (forecast) interval in hours
+    extlvls    : [51,9]   # vertical levels and vertical soil levels
+    numtry     : 10       # number of tries backward for valid files, based on update frequency
+    waitparms  : {exist: 20, ready: 240, tick: 5, size: 634880}
+    appext     : HRRRE    # appendence to be added for Vtable, METGRID table etc.
+    extdir     : /scratch/wofuser/MODEL_DATA/HRRRE
+    #
+    # extsubdir & filext to be evaluate by python later
+    # available python variables are:
+    #   exttime (DATETIME),
+    # a space "%02d" must leave for the forecast hour - startHour
+    # if nens > 0, another space for ensemble number (usually 0)
+    #
+    extsubdir  : "{:%Y%m%d/%H}00/postprd_mem{iens:04d}"
+    filext     : 'wrfnat_pert_hrrr_mem{iens:04d}_{no:02d}.grib2'
+    offset     : 0       # Offset backward in hours to search dataset
+                         # 2 hours is reasonable for real-time runs
+
+  HRRRDAS:
+    extintvals : [6,1]    # update frequency in hours and file (forecast) interval in hours
+    extlvls    : [51,9]   # vertical levels and vertical soil levels
+    numtry     : 10       # number of tries backward for valid files, based on update frequency
+    waitparms  : {exist: 20, ready: 240, tick: 5, size: 634880}
+    appext     : HRRRE    # appendence to be added for Vtable, METGRID table etc.
+    extdir     : /scratch/wofuser/MODEL_DATA/HRRRE
+    #
+    # extsubdir & filext to be evaluate by python later
+    # available python variables are:
+    #   exttime (DATETIME),
+    # a space "%02d" must leave for the forecast hour - startHour
+    # if nens > 0, another space for ensemble number (usually 0)
+    #
+    extsubdir  : "{:%Y%m%d}/1400/postprd_mem{iens:04d}"
+    filext     : 'wrfnat_hrrre_newse_mem{iens:04d}_01.grib2'
+    offset     : 0       # Offset backward in hours to search dataset
+                         # 2 hours is reasonable for real-time runs
+  HRRRX:
+    extintvals : [1,1]    # update frequency in hours and file (forecast) interval in hours
+    extlvls    : [51,9]   # vertical levels and vertical soil levels
+    numtry     : 10
+    # wait parameters [wait existence time in seconds,
+    #                  wait file ready in seconds,
+    #                  time stick,
+    #                  expected size in Kilo bytes]
+    waitparms  : {exist: 20, ready: 240, tick: 5, size: 634880}
+    appext     : HRRRX    # appendence to be added for Vtable, METGRID table etc.
+    extdir     : /work/ywang/saved_data/HRRRX
+    extsubdir  : "{:%Y%m%d%H}"
+    filext     : "wrfnat_hrconus_{no:02d}.grib2"
+    offset     : 2       # Offset backward in hours to search dataset
+                         # 2 hours is reasonable for real-time runs
+
+  HRRR:
+    extintvals : [1,1]    # update frequency in hours and file (forecast) interval in hours
+    extlvls    : [41,9]   # vertical levels and vertical soil levels
+    numtry     : 10
+    waitparms  : {exist: 20, ready: 240, tick: 5, size: 348160}
+    appext     : HRRR     # appendence to be added for Vtable, METGRID table etc.
+    extdir     : /work/ywang/saved_data/HRRR
+    extsubdir  : "{:%Y%m%d}"                             # based on evtTime
+    filext     : "hrrr.t{:%H}z.wrfprsf{no:02d}.grib2"    # based on exttime, no, iens
+    offset     : 0       # Offset backward in hours to search dataset
+                         # 2 hours is reasonable for real-time runs
+
+# [programs]
+
+programs :
+  -  # runcase 1
+    ['ungrib','geogrid','metgrid','tinterp','real','radremap','news3dvar','wrfhybrid']
+  -  # runcase 2
+    ['ungrib','metgrid','real','wrfdaupdate','wrf']
+  -  # runcase 3
+    ['ungrib','geogrid','metgrid','tinterp','real','radremap','news3dvar','wrfdaupdate','wrf']
+  -  # runcase 4
+    ['ungrib','metgrid','tinterp','real','radremap','news3dvar','wrfhybrid']
+  -  # runcase 5
+    ['ungrib','metgrid','real','wrfdaupdate','wrf']
+  -  &programwrf # runcase 6
+    ['ungrib','metgrid','real','wrfdaupdate','wrf']
+  -  *programwrf  # runcase 7
+
+NMLTemplates :
+  -  # 1
+      geogrid     : namelist.wps-V23
+      ungrib      : namelist.wps-V23
+      news3dvar   : news3dvar.input-V23
+      #news3dvar   : news3dvar.input-V21_mean
+      radremap    : radremap.input-V23
+      metgrid     : namelist.wps-V23
+      real        : namelist.input-V23
+      wrf         : namelist.input-V23
+      tinterp     : tinterp.input-V23
+      wrfhybrid   : wrfhybrid.input-V23
+  -  &wrfforward     # 2
+      wrfdaupdate : wrfdaupdate.input-V23
+      ungrib      : namelist.wps-V23
+      metgrid     : namelist.wps-V23
+      real        : namelist.input-V23
+      wrf         : namelist.input-V23
+      tinterp     : tinterp.input-V23
+
+  -  # 3
+      geogrid     : namelist.wps-V23
+      ungrib      : namelist.wps-V23
+      wrfdaupdate : wrfdaupdate.input-V23
+      news3dvar   : news3dvar.input-V23
+      radremap    : radremap.input-V23
+      real        : namelist.input-V23
+      wrf         : namelist.input-V23
+      tinterp     : tinterp.input-V23
+
+  -  # 4
+      geogrid     : namelist.wps-V23
+      ungrib      : namelist.wps-V23
+      metgrid     : namelist.wps-V23
+      tinterp     : tinterp.input-V23
+      real        : namelist.input-V23
+      news3dvar   : news3dvar.input-V23
+      radremap    : radremap.input-V23
+      wrfhybrid   : wrfhybrid.input-V23
+  -  *wrfforward    # 5
+  -  &wrfforcast    # 6
+      wrfdaupdate : wrfdaupdate.input-V23
+      ungrib      : namelist.wps-V23
+      metgrid     : namelist.wps-V23
+      real        : namelist.input-V23
+      wrf         : namelist.input-V23
+      joinwrf     : joinwrf.input
+      tinterp     : tinterp.input-V23
+  -  *wrfforcast    # 7
+
+# [plotting fields]
+
+fields: ['aglh3.0km','aglh4.5km','aglv3.0km','aglv4.5km']
+
+# [analysis data]
+
+obs4var : ['radar','auto','bufr','88vad','lightning2']
+
+obsconfs  :
+  radar :
+          datdir    : '/scratch/ywang/test_runs/NEXRAD2'
+          #subdir    : "{radar}"
+          #filename  : "{radar}{time:%Y%m%d_%H%M}??_V06"
+          subdir    : "20220520"
+          filename  : "RADR_{radar}{time:%Y%m%d%H%M00}.raw"
+          typeof    : rad
+          radarinfo : radarinfo.wofldm
+          timerange : [0,1,-1,2,-2,3,-3,4,-4,5,-5,-6,-7,-8,-9,-10]
+          maxwait   : 30       # in seconds
+  auto  :
+           datdir    : '/scratch/wofuser/realtime/OBSGEN/Mesonet'
+           subdir    : "{:%Y/%m/%d}"
+           filename  : "mesonet.realtime.{:%Y%m%d%H%M}"
+           typeof    : sng
+           stnfile   : okmeso_geoinfo.csv
+           expsize   : 20        # in K bytes
+           timerange : [0,-15]
+           maxwait   : 2
+  bufr  :
+           datdir    : '/scratch/wofuser/realtime/OBSGEN/RBUFR/'
+           subdir    : "{:%Y/%m/%d}"
+           filename  : "rtma.{:%Y%m%d%H%M}.prepbufr.tm00"
+           typeof    : conv
+           expsize   : 12000        # in K bytes
+           timerange : [0,-15]
+           maxwait   : 2
+  88vad :
+           datdir    : radremap
+           prepro    : ''
+           typeof    : ua
+  lightning2 :
+           datdir    : '/scratch/ywang/test_runs/GOES16/GLM'
+           subdir    : ""
+           filename  : "{:%Y%j%H%M}_glm.nc"
+           prepro    : ncrcat
+           typeof    : lightning
+           expsize   : 0
+           timerange : [0,-15]
+           maxwait   : 10
+
+
+# [resources]
+
+runConfig:
+              ##    MPI   nx ny Queue    Min NCPN Exclusive
+  -  &anlysis  # 1   ## MPI configuration   -- general
+     ungrib      : [False, 1,  1, batch, 40, 1, True]
+     geogrid     : [True,  4,  6, batch, 30,24, False]
+     metgrid     : [True,  6, 12, batch, 50,72, False]
+     tinterp     : [False, 1,  1, batch, 40, 1, False]   # keep the same as metgrid
+     real        : [True,  6, 12, batch, 20,72, False]
+     wrf         : [True,  6, 12, batch, 40,72, False]
+     radremap    : [True,  4,  6, batch, 10,24, False]
+     news3dvar   : [True,  6, 12, batch, 30,72, False, {numtry: 2} ]
+     nclplt      : [False, 1,  1, batch, 10, 1, False]
+     wrfhybrid   : [True,  6,  6, batch, 30,36, False]
+  -  &wrffrwd  # 2
+     ungrib      : [False, 1,  1, batch, 40, 1, True]
+     metgrid     : [True,  6, 12, batch, 30,72, False]
+     real        : [True,  6, 12, batch, 20,72, False]
+     wrf         : [True,  6, 12, batch, 45,72, False]
+     wrfdaupdate : [False, 1,  1, batch, 10, 1, False]
+  -  &wrffcst #3
+     ungrib      : [False, 1,  1, batch, 40, 1, True]
+     geogrid     : [True,  4,  6, batch, 30,24, False]
+     metgrid     : [True,  6, 12, batch, 40,72, False]
+     tinterp     : [False, 1,  1, batch, 20, 1, False]   # keep the same as metgrid
+     real        : [True,  6, 12, batch, 30,72, False]
+     radremap    : [True,  4,  6, batch, 10,24, False]
+     news3dvar   : [True,  6, 12, batch, 30,72, False]
+     wrf         : [True,  8, 12, batch,140,96, False]
+     joinwrf     : [False, 1,  1, batch, 20, 1, False]
+     wrfdaupdate : [False, 1,  1, batch, 20, 1, False]
+     nclplt      : [False, 1,  1, batch, 10, 1, False] # Keep for plotdomain
+  -   #4
+     ungrib      : [False, 1,  1, batch, 40, 1, True]
+     geogrid     : [True,  4,  6, batch, 30,24, False]
+     metgrid     : [True,  6, 12, batch, 50,72, False]
+     tinterp     : [False, 1,  1, batch, 40, 1, False]   # keep the same as metgrid
+     real        : [True,  6, 12, batch, 20,72, False]
+     wrf         : [True,  6, 12, batch, 40,72, False]
+     radremap    : [True,  4,  6, batch, 10,24, False]
+     news3dvar   : [True,  6, 12, batch, 30,72, False, {numtry: 2} ]
+     nclplt      : [False, 1,  1, batch, 10, 1, False]
+     wrfhybrid   : [True,  6,  6, batch, 30,36, False]
+  -  *wrffrwd  #5
+  -  *wrffcst  #6
+  -  *wrffcst  #7
+
+# [directories]
+
+rundirs :
+
+    vardir       : '/scratch/ywang/NEWSVAR/news3dvar.2023'
+    wpsdir       : '/scratch/ywang/NEWSVAR/news3dvar.2023/WRF_RUN'
+    wrfdir       : '/scratch/ywang/NEWSVAR/news3dvar.2023/WRF_RUN'
+    inputdir     : '/scratch/ywang/NEWSVAR/news3dvar.2023/NSSLVAR'
+    dartdir      : '/scratch/ywang/test_runs/hyb23/wofs_run'

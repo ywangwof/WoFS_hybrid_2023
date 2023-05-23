@@ -1,0 +1,90 @@
+This directory provides the WRF and WPS runtime files and programs:
+
+.
+├── geogrid
+│   ├── geogrid.exe -> /home/wofuser/WOFS/WPSV3.7.1/geogrid/src/geogrid.exe
+│   └── GEOGRID.TBL.ARW -> /home/wofuser/WOFS/WPSV3.7.1/geogrid/GEOGRID.TBL.ARW
+├── main
+│   ├── real.exe -> /home/wofuser/WOFS/WRFV3.9_WOFS/main/real.exe
+│   └── wrf.exe -> /home/wofuser/WOFS/WRFV3.9_WOFS/main/wrf.exe
+├── metgrid
+│   ├── metgrid.exe -> /home/wofuser/WOFS/WPSV3.7.1/metgrid/src/metgrid.exe
+│   └── METGRID.TBL.ARW.HRRRE -> /home/wofuser/WOFS/Templates/METGRID.TBL
+├── README
+├── run
+│   ├── aerosol.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/aerosol.formatted
+│   ├── aerosol_lat.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/aerosol_lat.formatted
+│   ├── aerosol_lon.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/aerosol_lon.formatted
+│   ├── aerosol_plev.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/aerosol_plev.formatted
+│   ├── bulkdens.asc_s_0_03_0_9 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/bulkdens.asc_s_0_03_0_9
+│   ├── bulkradii.asc_s_0_03_0_9 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/bulkradii.asc_s_0_03_0_9
+│   ├── CAM_ABS_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAM_ABS_DATA
+│   ├── CAM_AEROPT_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAM_AEROPT_DATA
+│   ├── CAMtr_volume_mixing_ratio.A1B -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAMtr_volume_mixing_ratio.A1B
+│   ├── CAMtr_volume_mixing_ratio.A2 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAMtr_volume_mixing_ratio.A2
+│   ├── CAMtr_volume_mixing_ratio.RCP4.5 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAMtr_volume_mixing_ratio.RCP4.5
+│   ├── CAMtr_volume_mixing_ratio.RCP6 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAMtr_volume_mixing_ratio.RCP6
+│   ├── CAMtr_volume_mixing_ratio.RCP8.5 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CAMtr_volume_mixing_ratio.RCP8.5
+│   ├── capacity.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/capacity.asc
+│   ├── CCN_ACTIVATE.BIN -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CCN_ACTIVATE.BIN
+│   ├── CLM_ALB_ICE_DFS_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_ALB_ICE_DFS_DATA
+│   ├── CLM_ALB_ICE_DRC_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_ALB_ICE_DRC_DATA
+│   ├── CLM_ASM_ICE_DFS_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_ASM_ICE_DFS_DATA
+│   ├── CLM_ASM_ICE_DRC_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_ASM_ICE_DRC_DATA
+│   ├── CLM_DRDSDT0_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_DRDSDT0_DATA
+│   ├── CLM_EXT_ICE_DFS_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_EXT_ICE_DFS_DATA
+│   ├── CLM_EXT_ICE_DRC_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_EXT_ICE_DRC_DATA
+│   ├── CLM_KAPPA_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_KAPPA_DATA
+│   ├── CLM_TAU_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/CLM_TAU_DATA
+│   ├── co2_trans -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/co2_trans
+│   ├── coeff_p.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/coeff_p.asc
+│   ├── coeff_q.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/coeff_q.asc
+│   ├── constants.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/constants.asc
+│   ├── eclipse_besselian_elements.dat -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/eclipse_besselian_elements.dat
+│   ├── ETAMPNEW_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ETAMPNEW_DATA
+│   ├── ETAMPNEW_DATA_DBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ETAMPNEW_DATA_DBL
+│   ├── ETAMPNEW_DATA.expanded_rain -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ETAMPNEW_DATA.expanded_rain
+│   ├── ETAMPNEW_DATA.expanded_rain_DBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ETAMPNEW_DATA.expanded_rain_DBL
+│   ├── forecast_vars_d01.txt
+│   ├── FPE.para -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/FPE.para
+│   ├── GENPARM.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/GENPARM.TBL
+│   ├── grib2map.tbl -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/grib2map.tbl
+│   ├── gribmap.txt -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/gribmap.txt
+│   ├── kernels.asc_s_0_03_0_9 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/kernels.asc_s_0_03_0_9
+│   ├── kernels_z.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/kernels_z.asc
+│   ├── LANDUSE.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/LANDUSE.TBL
+│   ├── masses.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/masses.asc
+│   ├── MPTABLE.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/MPTABLE.TBL
+│   ├── namelist.input -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/namelist.input
+│   ├── ozone.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ozone.formatted
+│   ├── ozone_lat.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ozone_lat.formatted
+│   ├── ozone_plev.formatted -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/ozone_plev.formatted
+│   ├── p3_lookup_table_1.dat -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/p3_lookup_table_1.dat
+│   ├── README.namelist -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/README.namelist
+│   ├── README.rasm_diag -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/README.rasm_diag
+│   ├── README.tslist -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/README.tslist
+│   ├── RRTM_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/RRTM_DATA
+│   ├── RRTM_DATA_DBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/RRTM_DATA_DBL
+│   ├── RRTMG_LW_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/RRTMG_LW_DATA
+│   ├── RRTMG_LW_DATA_DBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/RRTMG_LW_DATA_DBL
+│   ├── RRTMG_SW_DATA -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/RRTMG_SW_DATA
+│   ├── RRTMG_SW_DATA_DBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/RRTMG_SW_DATA_DBL
+│   ├── SOILPARM.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/SOILPARM.TBL
+│   ├── SOILPARM.TBL.bnu -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/SOILPARM.TBL.bnu
+│   ├── SOILPARM.TBL.newwilt -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/SOILPARM.TBL.newwilt
+│   ├── SOILPARM.TBL.oldwilt -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/SOILPARM.TBL.oldwilt
+│   ├── termvels.asc -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/termvels.asc
+│   ├── tr49t67 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/tr49t67
+│   ├── tr49t85 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/tr49t85
+│   ├── tr67t85 -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/tr67t85
+│   ├── URBPARM.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/URBPARM.TBL
+│   ├── URBPARM_UZE.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/URBPARM_UZE.TBL
+│   ├── VEGPARM.TBL -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/VEGPARM.TBL
+│   └── wind-turbine-1.tbl -> /home/wofuser/WOFS/WRFV3.9_WOFS/run/wind-turbine-1.tbl
+└── ungrib
+    ├── ungrib.exe -> /home/wofuser/WOFS/WPSV3.7.1/ungrib/src/ungrib.exe
+    ├── Variable_Tables
+    │   └── Vtable.HRRRE -> ../Vtable.HRRRE.2018
+    └── Vtable.HRRRE.2018
+
+6 directories, 79 files

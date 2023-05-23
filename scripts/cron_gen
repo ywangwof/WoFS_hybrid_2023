@@ -1,0 +1,153 @@
+#!/bin/bash
+
+scpdir=$(dirname $0)
+
+crontmpl="cron.tmpl"
+
+year="2020"
+eventdt=$(date +%m%d)
+run=1
+
+function usage {
+    echo " "
+    echo "    USAGE: $0 [options] EVENTDAY"
+    echo " "
+    echo "    PURPOSE: Creat crontab job file"
+    echo " "
+    echo "    EVENTDAY - Event date in MMDD"
+    echo " "
+    echo "    OPTIONS:"
+    echo "              -h              Display this message"
+    echo "              -n              Show command to be run only"
+    echo "              -v              Verbose mode"
+    echo "              -d 1            Number of days to run from EVENTDAY"
+    echo "              -r [1,2,3]      Jobs to run, default: ${run}"
+    echo "                              1. hybrid analysis "
+    echo "                              2. Download HRRRX "
+    echo "                              3. Preprocessing GLM "
+    echo " "
+    echo "   DEFAULTS:"
+    echo "              scpdir    = $scpdir"
+    echo "              crontmpl  = $scpdir/$crontmpl"
+    echo "              EVENTDATE = $year$eventdt"
+    echo " "
+    echo "                                     -- By Y. Wang (2020.04.23)"
+    echo " "
+    exit $1
+}
+
+#-----------------------------------------------------------------------
+#
+# Default values
+#
+#-----------------------------------------------------------------------
+
+show=0
+verb=0
+days=1
+
+#-----------------------------------------------------------------------
+#
+# Handle command line arguments
+#
+#-----------------------------------------------------------------------
+
+while [[ $# > 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        -h)
+            usage 0
+            ;;
+        -n)
+            show=1
+            ;;
+        -v)
+            verb=1
+            ;;
+        -r)
+            IFS=',' read -r -a run <<< "$2"
+            shift
+            ;;
+        -d)
+            days=$2
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $key"
+            exit
+            ;;
+        *)
+            if [[ $key =~ ^[0-9]{4}$ ]]; then
+                eventdt="$key"
+            elif [[ $key =~ "*" ]]; then
+                eventdt="$key"
+            else
+                echo ""
+                echo "ERROR: unknown option, get [$key]."
+                usage -2
+            fi
+            ;;
+    esac
+    shift # past argument or value
+done
+
+runc=('#A' '#B' '#C')
+runs=(0 0 0)
+
+for runno in ${run[@]}; do
+    if [[ $runno -eq 0 ]]; then
+      runs=(1 1 1)
+      break
+    elif [[ $runno -ge 1 && $runno -le 3 ]]; then
+      runi=$((runno-1))
+      runs[$runi]=1
+    else
+      echo "ERROR: unknow run option: $runno."
+      exit 0
+    fi
+done
+
+#-----------------------------------------------------------------------
+#
+# Create cron file to be run
+#
+#-----------------------------------------------------------------------
+
+cronbase="${scpdir}/${crontmpl}"
+cronfile="${scpdir}/cron.txt"
+
+if [[ -f ${cronfile} ]]; then
+  rm -rf ${cronfile}
+fi
+
+if [[ $eventdt == "*" ]]; then
+  DD="*"
+  DN="*"
+else
+  DD=$(date -d "$year$eventdt" +%d)
+  DN=$(date -d "$year$eventdt 1 day" +%d)
+  daysnum=$((days-1))
+  for day in $(seq 1 1 $daysnum); do
+    nextday=$((day+1))
+    DD="$DD,$(date -d "$year$eventdt $day day" +%d)"
+    DN="$DN,$(date -d "$year$eventdt $nextday day" +%d)"
+  done
+fi
+
+sed "/DD * * /s/DD/$DD/;/DN * * /s/DN/$DN/" $cronbase > $cronfile
+for runno in ${!runs[@]}; do
+  if [[ ${runs[$runno]} -eq 1 ]]; then
+    echo "Turn on ${runc[$runno]} ...."
+    sed -i "s/^${runc[$runno]} //" $cronfile
+  fi
+done
+
+echo " "
+echo "Crontab file : $cronfile,   DATE:  $year$eventdt,   DAYS: $days"
+echo "To install   : crontab $cronfile"
+echo " "
+
+exit 0
+

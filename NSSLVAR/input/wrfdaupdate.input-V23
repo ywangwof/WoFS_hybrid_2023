@@ -1,0 +1,248 @@
+!
+!   ##################################################################
+!   ##################################################################
+!   ######                                                      ######
+!   ######         INPUT FILE FOR PROGRAM WRFDAUPDATE           ######
+!   ######                                                      ######
+!   ######                                                      ######
+!   ######                     Developed by                     ######
+!   ######       National Severe Storm Laboratory, NOAA         ######
+!   ######                                                      ######
+!   ##################################################################
+!   ##################################################################
+!
+*-----------------------------------------------------------------------
+!
+!  This file contains run-time parameters for program WRFDAUPDATE in
+!  Fortran NAMELIST format.
+!
+!-----------------------------------------------------------------------
+!
+!  Boundary process (update_lateral_bdy = .TRUE.):
+!  -----------------------------------------------
+!
+!  |------------|   |------------|    --------------     |-------------|
+!  | da_file    | + | wrf_bdy_in | + | wrf_input_in |  = | wrf_bdy_out |
+!  |------------|   |------------|    --------------     |-------------|
+!                                        ^
+!                                        |
+!                                        |
+!                               Required only for a few static fields.
+!                               if da_file contains these fields, this
+!                               file can be the same as "da_file". In
+!                               this case, "update_input" must be .FALSE.
+!                               because we will not update da_file with
+!                               itself unless you want to update the
+!                               time-dependent fields in "da_file" from
+!                               "wrf_td_in" only.
+!
+!
+!  WRF input/out file updates (update_input = .TRUE.):
+!  ---------------------------------------------------
+!
+!                                      update_input_copy_td = .TRUE.
+!                                             |
+!                                             |
+!                                             -
+!  |------------|   |--------------|    -----------    |---------------|
+!  | da_file    | + | wrf_input_in | + | wrf_td_in | = | wrf_input_out |
+!  |------------|   |--------------|    -----------    |---------------|
+!                     ^                   ^
+!                     |                   |
+!                     |                   |
+!               For time-independent    For time-dependent
+!               static fields and       fields. Will not required
+!               grid.                   if da_file and wrf_input_in
+!                                       are valid at the same time
+!               This set of files can be
+!               either WRF input-formatted
+!               file or WRF out-formatted file
+!               as long as it contains the
+!               required fields. User will
+!               get the same formatted file
+!               in "wrf_input_out".
+!
+!  NOTES:
+!  ------
+!   o WRF lateral boundary (wrf_bdy_in, wrf_bdy_out) are always in one
+!     joined file.
+!   o WRF input-formatted file and WRF history output files can be either
+!     one joined file or split files.
+!   o da_file, wrf_input_in, wrf_td_in and wrf_input_out can have different
+!     number of patches if they are split files, but they must be defined
+!     on the same domain.
+!   o Fields to be overwritten from da_file (analyzed fields) and fields
+!     to be copied from wrf_td_in (time-dependent fields) are hard-coded
+!     in the program.
+!                                                                    =*
+*-----------------------------------------------------------------------
+!
+! Author: Yunheng Wang (10/29/2013)
+!  Based on da_update_bc in WRFVAR package.
+!
+! Modification history:
+!
+!  01/27/2014 (Y. Wang)
+!  Added capability to read WRF split files.
+!
+!  03/13/2014 (Y. Wang)
+!  Improved documentation.
+!
+!---------------------------------------------------------------------=*
+
+*-----------------------------------------------------------------------
+!
+! INPUT_FILES
+!
+!  wrf_bdy_in         Original WRF boundary file
+!  wrf_input_in       Original WRF input file for time independent fields
+!                     It can be either input-formatted WRF file or
+!                     out-formatted file depends on desired output. It can
+!                     also be the same file as da_file as long as
+!                     update_input = .false. and da_file contains mu, mub,
+!                     mapfac_U, MAPFAC_V, and MAPFAC_M.
+!
+!  da_file            Data file after data analysis. Datasets in this file
+!                     will be used to update WRF input file (wrf_input_in)
+!                     or lateral boundary file (wrf_bdy_in) and dumped to
+!                     wrf_input_out and wrf_bdy_out.
+!
+!  domain_id          = 1, update_lateral_bdy
+!                     > 1, do not do update_lateral_bdy, but update_low_bdy
+!
+!  nproc_dax_in       Number of DA file patches in X direction
+!  nproc_day_in       Number of DA file patches in Y direction
+!
+!  nproc_inx_in       Number of input template file patches in X direction
+!  nproc_iny_in       Number of input template file patches in Y direction
+!
+!  end_time_str       Expected ending time string for wrf lateral boundary file
+!
+!  Following variables are used only when update_input is .TRUE.
+!
+!  wrf_td_in          Original WRF output file for time dependent fields
+!                     when update_input_copy_td = .false., this file is
+!                     not used.
+!
+!  nproc_tdx_in       Number of WRF output file patches in X direction
+!  nproc_tdy_in       Number of WRF output file patches in Y direction
+!
+!---------------------------------------------------------------------=*
+
+ &input
+
+   wrf_bdy_in   = '/scratch/ywang/test_runs/20160218/case01_1810Z/dom00/real1/wrfbdy_d01',
+
+   da_file      = '/scratch/ywang/test_runs/20160218/case01_1810Z/dom00/newe3dvar/wrfout_d01_2016-02-18_18:10:00',
+   nproc_dax_in = 1,   nproc_day_in = 1,
+
+   wrf_input_in = '/scratch/ywang/test_runs/20160218/case01_1810Z/dom00/real1/wrfinput_d01',
+   nproc_inx_in = 1,   nproc_iny_in = 1,
+
+   wrf_td_in    = '/scratch/ywang/test_runs/20160218/case01_1810Z/dom00/wrf/wrfout_d01_2016-02-18_18:10:00',
+   nproc_tdx_in = 1,   nproc_tdy_in = 1,
+
+   magnitude_processor = 4,
+
+   end_time_str  = '1998-05-25_06:00:00',
+
+ /
+
+*-----------------------------------------------------------------------
+!
+! CONTROL_PARAM
+!
+!  update_lateral_bdy   Update wrf_bdy_file with new data in da_file
+!                       Requires wrf_bdy_in & wrf_input_in
+!  update_input         Update wrf_input with analyzed fields from da_file.
+!                       Requires wrf_input_in
+!  update_input_copy_td Copy time dependent fields from WRF output files
+!                       Requires wrf_td_in, nproc_tdx_in and nproc_tdy_in
+!                       if wrf_input_in and wrf_input_out are both valid
+!                       at exactly the same forecast time, this variable
+!                       can be .FALSE..
+!
+!  define_bdy     The program will call netCDF fortran API to define or
+!  copy_input     copy the output boundary file and output WRF input file.
+!                 Otherwise, the output files will be defined or copied
+!                 into the output directory either by excuting a script command
+!                 before running this program, or call Fortran SYSTEM
+!                 function by this program at runtime. Note that when they
+!                 are true, the program may take more execution time.
+!                 With either true or false setting, the program skips
+!                 the defining and copying step always if it can find the
+!                 specified files in the output directory.
+!
+!---------------------------------------------------------------------=*
+
+ &control_param
+
+   update_lateral_bdy      = .true.,
+   update_input            = .true.,
+   update_input_copy_td    = .true.,
+
+   define_bdy   = .TRUE.,
+   copy_input   = .TRUE.,
+
+   use_input_w  = .TRUE.,
+ /
+*-----------------------------------------------------------------------
+!
+! PERTURB  Add random perturbations
+!
+!  perturb_ic         Number of variables to be perturbated in INPUT files
+!  perturb_ic_vars    Variable names in INPUT files
+!  perturb_ic_sd      Standard deviation for each variable N(0,sd)
+!
+!  perturb_lbc        Number of variables to be perturbated in boundary files
+!  perturb_lbc_vars   Variable names in INPUT files
+!  perturb_lbc_sd     Standard deviation for each variable N(0,sd)
+!
+!---------------------------------------------------------------------=*
+
+&perturb
+  perturb_ic  = 0,
+  perturb_ic_vars = 'U','V','T',
+  perturb_ic_sd   = 1.0, 1.0, 0.5,
+  perturb_ic_max  = 1.0, 1.0, 0.5,
+  perturb_ic_seed = 1, 2, 3,
+
+  perturb_lbc = 0,
+  perturb_lbc_vars = 'U','V','T',
+  perturb_lbc_sd   = 1.0,1.0,0.5,
+  perturb_lbc_max  = 1.0,1.0,0.5,
+  perturb_lbc_seed = 4, 5, 6,
+ /
+
+*-----------------------------------------------------------------------
+!
+! OUTPUT
+!
+!  outdir             Data file output directory
+!  wrf_bdy_out        Output WRF boundary file
+!  wrf_input_out      Output WRF input file if desized
+!
+!  nproc_x_out        Denotes number of patches for wrf_input_out
+!  nproc_y_out        used only if update_input is .True.
+!
+!  lvldbg             Program debugging
+!                >  9, Variable name
+!                = 11, Variable detail from file
+!                > 19, File name
+!                = 21, File detail with patch number
+!                > 32, Sample data outputs
+!
+!---------------------------------------------------------------------=*
+
+ &output
+
+   outdir        = './',
+
+   wrf_bdy_out   = 'wrfbdy_d01',
+
+   wrf_input_out = 'wrfinput_d01',
+   nproc_x_out   = 1,  nproc_y_out   = 1,
+
+   lvldbg        = 0,
+
+ /

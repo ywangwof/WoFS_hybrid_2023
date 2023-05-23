@@ -1,0 +1,12 @@
+
+&ungrib
+ out_format = 'WPS',
+ prefix = 'GFS_no_soil',
+/
+
+&metgrid
+ fg_name = 'GFS_no_soil','RAP_soil_only',
+ constants_name = 'SST',
+ io_form_metgrid = 2,
+ opt_metgrid_tbl_path = '/home/wof/NEWSe/templates_RAP-GEFS',
+/

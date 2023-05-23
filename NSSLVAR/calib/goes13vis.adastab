@@ -1,0 +1,7 @@
+! Calibration constants for GOES-13 Visible Channel
+! http://www.oso.noaa.gov/goes/goes-calibration/vicarious-calibration.htm
+! 
+! Launch
+! Date      Day 0 Cal  Dim Rate (per day)
+!
+'2006-05-24'  1.000    0.0001022

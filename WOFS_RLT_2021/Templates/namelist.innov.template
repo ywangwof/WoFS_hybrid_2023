@@ -1,0 +1,6 @@
+ &iosetup
+  nmem = 36,
+  infilename='./diag_conv_ges.mem',
+  num_digit_in_filename = 3,
+  outfilename='diag_conv_ges.ensmean',
+ /

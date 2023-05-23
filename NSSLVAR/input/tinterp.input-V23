@@ -1,0 +1,161 @@
+!
+!     ##################################################################
+!     ##################################################################
+!     ######                                                      ######
+!     ######       INPUT FILE FOR TINTRP IN NAMELIST FORMAT       ######
+!     ######                                                      ######
+!     ######                     Developed by                     ######
+!     ######       National Severe Storm Laboratory, NOAA         ######
+!     ######                                                      ######
+!     ##################################################################
+!     ##################################################################
+!
+!
+!-----------------------------------------------------------------------
+!
+!  This file contains the input parameters in namelist format for
+!  gridded data time-interpolation program TINTRP.
+!
+!  The program interpolates two history data on grid of the same
+!  size to a time inbetween them. The output will be written into a new
+!  history dump file.
+!
+!  Steps to use this program:
+!
+!  Step 1: Compile and link using 'make tinterp'
+!  Step 2: Edit input file tinterp.input
+!  Step 3: Run job using 'bin/tinterp < tinterp.input'.
+!
+!-----------------------------------------------------------------------
+!
+!   Author:
+!
+!   Yunheng Wang (10/06/2015)
+!   Written based on ARPSTINTRP in the ARPS package.
+!
+!   Modification history:
+!
+!-----------------------------------------------------------------------
+!
+! Message passing parameters
+!
+!  MESSAGE_PASSING  Namelist for message passing version of the program.
+!                   These values are ignored for the non-MP version.
+!
+!  nproc_x      Number of processors in the x-direction.
+!  nproc_y      Number of processors in the y-direction.
+!
+!         NOTE  that (nx-3)/nproc_x and (ny-3)/nproc_y must be
+!               integers.
+!
+! nproc_x_in    Number of input patches in x-direction
+! nproc_y_in    Number of input patches in y-direction
+!
+!         NOTE: Must be either 1 or nproc_x/nproc_y at present
+!
+! nproc_x_out   Number of patches in x-direction for output
+! nproc_y_out   Number of patches in y-direction for output
+!
+!         NOTE: Must be either 1 or nproc_x/nproc_y at present
+!
+!-----------------------------------------------------------------------
+
+ &message_passing
+   nproc_x = 1,
+   nproc_y = 1,
+
+   nproc_x_in = 1,
+   nproc_y_in = 1,
+
+   nproc_x_out = 1,
+   nproc_y_out = 1,
+ /
+!
+!-----------------------------------------------------------------------
+!
+!  Input control parameters
+!
+!  hinfmt   The format flag of the input history data.
+!          = 1, grib formatted files
+!          = 2, WRF netCDF formatted files
+!
+!  hisfmt   The file standards used
+!          = 0, WRF ARW netCDF file, DEFAULT
+!          = 1, Output from metgrid.exe
+!
+!  hisfile(1)  Name of the 1st history data file. The 1st data should
+!              be earlier than 2nd one in time.
+!  hisfile(2)  Name of the 2nd history data file.
+!
+!-----------------------------------------------------------------------
+!
+ &input
+   hinfmt = 2,
+   hisfmt = 1,
+   hisfile(1) = '/scratch/ywang/test_runs/20140520/9km_0000Z/outmet/met_em.d02.2014-05-20_00:00:00.nc'
+   hisfile(2) = '/scratch/ywang/test_runs/20140520/9km_0000Z/outmet/met_em.d02.2014-05-20_06:00:00.nc'
+ /
+
+!
+!-----------------------------------------------------------------------
+!
+!  Interpolation options
+!
+!  nvarlist    Number of variables in the data files to be interpolated
+!              in time. All other variable will be extracted from the
+!              first history file directly
+!          = 0, all variables in the history file should be interpolated
+!               'varlist' below will be ignored
+!  varlist     A list variable names  that are time dependent
+!
+!-----------------------------------------------------------------------
+!
+
+ &intrp_opt
+   nvarlist = 19,
+   varlist  = 'PRES','SM','ST','RH','VV','UU','TT',
+              'SM100200','SM040100','SM010040','SM000010',
+              'ST100200','ST040100','ST010040','ST000010',
+              'SKINTEMP','PSFC','SNOALB','SOILTEMP',
+ /
+!-----------------------------------------------------------------------
+!
+!  Output control parameters.
+!
+!  outfmt    NetCDF file mode
+!           = 0, nf_format_classic, 
+!           = 1, nf_format_64bit,    (DEFAULT)
+!           = 2, nf_format_netcdf4, or 
+!           = 3, nf_format_netcdf4_classic
+!     
+!      NOTE:  NetCDF compression level is defined by mod(outfmt,100).
+!
+!  outfname, a string of up to 256 characters long, is used to construct
+!            the output file names and directory. Blank string to use
+!            the original file name, just does a data/time replacement.
+!
+!  use_data_t Use the reference initial time string in the first data
+!            set (hisfile(1)) instead of initime specified in the following.
+!
+!  initime = 'yyyy-mm-dd.hr:mn:se', UTC(GMT) date/time. yyyy is a
+!            4-digit integer for year, and mm, dd, hr, mn, and se are
+!            2-digit integers for month, day, hour, minute, and second,
+!            respectively. For example, 20:30Z, Dec. 19, 1994 would be
+!            represented as: 1994-12-19.20:30:00
+!
+!  outtime   The time of the interpolated output data, either relative
+!            to initime or that of hisfile(1) depending on option
+!            use_data_t.
+!
+!-----------------------------------------------------------------------
+
+ &output
+   outdir   = './',
+   outfmt   = 202,
+   outfname = ' ',
+   use_data_t = 1,
+     initime = '1977-05-20.21:00:00',
+   nouttime = 2,
+   outtime  = 0,360,720,1080,1440,1800,2160,21600,
+   lvldbg = 0,
+ /

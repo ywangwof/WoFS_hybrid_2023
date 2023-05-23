@@ -1,0 +1,11 @@
+
+&ungrib
+ out_format = 'WPS',
+ prefix = 'HRRRE',
+/
+
+&metgrid
+ fg_name = 'HRRRE',
+ io_form_metgrid = 2,
+ opt_metgrid_tbl_path = '/home/wof/WOFS/Templates'
+/

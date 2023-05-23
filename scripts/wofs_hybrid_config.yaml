@@ -1,0 +1,463 @@
+#
+# Configuration for the real-time generation
+# of the summary files.
+#
+
+# The output timestep for the WRFOUT files
+# in minutes
+
+fcstinterval : 10
+n_ens_mem : 1
+run_type: 'rto'
+
+file_start : 'wrfhyb_d01'
+
+eventdate : 20211210
+time : 1700
+
+starttimes: [
+                '1700Z',
+                '1800Z',
+                '1900Z',
+                '2000Z',
+                '2100Z',
+                '2200Z',
+                '2300Z',
+                '0000Z',
+                '0100Z',
+                '0200Z',
+                '0300Z']
+fcstlength: [
+             36,
+             36,
+             36,
+             36,
+             36,
+             36,
+             36,
+             36,
+             36,
+             36,
+             36
+            ]
+
+gribstart: [
+            '1700',
+            '1800',
+            '1900',
+            '2000',
+            '2100',
+            '2200',
+            '2300',
+            '0000',
+            '0100',
+            '0200',
+            '0300'
+           ]
+
+### Duration config ###
+# Only used for 30M and 60M swath summary files #
+
+duration_30M: 30
+duration_60M: 60
+
+### Processor config ###
+### Config for Odin HPC below: ###
+n_procs_post_ens: 24
+n_procs_post_env: 12
+n_procs_post_30M: 12
+n_procs_post_60M: 6
+
+n_procs_plot: 24
+
+### Directory config ###
+scriptdir:  /oldscratch/ywang/NEWSVAR/news3dvar.2021/WoF_post/
+fcstroot:   /scratch/ywang/real_runs/
+summarydir: /scratch/ywang/test_runs/summary_files/
+imagedir:   /scratch/ywang/test_runs/images_real/
+flagdir:    /scratch/ywang/test_runs/flags/
+griboutdir: /scratch/brian.matilla/WOFS_2021/GRIB2_RLT/HYB/
+jsondir:    /home/brian.matilla/WOFS_2021/REALTIME/WoF_post/json/
+
+# These are used for generating the summary file name
+# Each corresponding to the summary files for
+#
+modes :
+    intrastorm_vars : ENS
+    environment_vars : ENV
+
+
+intrastorm_vars : [   'uh_2to5',
+                      'uh_0to2',
+                      'wz_0to2',
+                      'comp_dz',
+                      'comp_wz',
+                      'dbz_1km',
+                      'dbz_2km',
+                      'rain',
+                      'w_up',
+                      'ws_80',
+                      'hail',
+                      'hailcast'
+                   ]
+
+environment_vars : [    "u_10",
+                        "v_10",
+                        "u_bl",
+                        "v_bl",
+                        "mslp",
+                        "td_2",
+                        "t_2",
+                        "qv_2",
+                        "theta_e",
+                        "comp_dz",
+                        "shear_u_0to1",
+                        "shear_v_0to1",
+                        "shear_u_0to6",
+                        "shear_v_0to6",
+                        "bunkers",
+                        "srh_0to500",
+                        "srh_0to1",
+                        "srh_0to3",
+                        "sw_down",
+                        "iwp",
+                        "lwp",
+                        "pw",
+                        "ctp",
+                        "ul_dvg",
+                        "corfidi_vector",
+                        "omega",
+                        "sounding_parameters_ml",
+                        "sounding_parameters_mu",
+                        "sounding_parameters_sfc",
+                        "ul_dvg",
+                        "mean_wind",
+                        "psfc",
+                        "theta_v",
+                        "temp_v",
+                        "pbl_mfc",
+                        "stp",
+                        "stp_srh0to500"
+                        ]
+
+
+variables_at_different_plevels :
+                                [
+                                "temperature",
+                                "td",
+                                "U",
+                                "V"
+                                ]
+
+metadata_dict :
+    xlat:
+        long_name : latitude
+        units     : degrees_north
+        standard_name : latitude
+        level     : L0
+    xlon:
+        long_name : longitude
+        units     : degrees_west
+        standard_name : longitude
+        level     : L0
+    hgt:
+        long_name : Height
+        units     : m
+        standard_name: Height above ground level
+        level     : L0
+    wz_0to2 :
+        long_name : Average 0-2 km Vertical Vorticity
+        units     : s^-1
+        level     : Z2000
+    comp_wz :
+        long_name : Composite Vertical Vorticity
+        units     : s^-1
+        level     : Z0
+    comp_dz :
+        long_name : Composite Reflectivity
+        units     : dBZ
+        level     : Z0
+    dbz_1km :
+        long_name : 1-km AGL Reflectivity
+        units     : dBZ
+        level     : Z1000
+    dbz_2km :
+        long_name : 2-km AGL Reflectivity
+        units     : dBZ
+        level     : Z2000
+    uh_0to2 :
+        long_name : 0-2 km Updraft Helicity
+        units     : m^2 s^-2
+        level     : Z2000
+    uh_2to5 :
+        long_name : 2-5 km Updraft Helicity
+        units     : m^2 s^-2
+        level     : Z5000
+    rain :
+        long_name : 5-min accumulated rainfall
+        units     : in.
+        level     : A0
+    w_up :
+        long_name : Column-max Updraft
+        units     : m s^-1
+        level     : L0
+    ws_80 :
+        long_name : 80-m wind speed
+        units     : kts
+        level     : Z80
+    hail :
+        long_name : max hail size at the surface (NSSL 2-moment)
+        units     : in
+        level     : L0
+    hailcast :
+        long_name : max hail size at the surface (Hailcast)
+        units     : in
+        level     : L0
+    u_10:
+        long_name : U-component of 10-m AGL wind
+        units     : kts
+        level     : Z10
+    v_10:
+        long_name : V-component of 10-m AGL wind
+        units     : kts
+        level     : Z10
+    U_850:
+        long_name : U-component of 850-hPa wind
+        units     : kts
+        level     : P850
+    V_850:
+        long_name : V-component of 850-hPa wind
+        units     : kts
+        level     : P850
+    U_700:
+        long_name : U-component of 700-hPa wind
+        units     : kts
+        level     : P700
+    V_700:
+        long_name : V-component of 700-hPa wind
+        units     : kts
+        level     : P700
+    U_500:
+        long_name : U-component of 500-hPa wind
+        units     : kts
+        level     : P500
+    V_500:
+        long_name : V-component of 500-hPa wind
+        units     : kts
+        level     : P500
+    omega:
+        long_name : 700-hPa omega (vertical velocity)
+        units     : Pa/s
+        level     : P700
+    u_bl:
+        long_name : U-component of 1000-925 hPa wind
+        units     : kts
+        level     : P925
+    v_bl:
+        long_name : V-component of 1000-925 hPa wind
+        units     : kts
+        level     : P925
+    ul_dvg:
+        long_name : Upper-level Divergence
+        units     : kts
+        level     : L0
+    psfc:
+        long_name : Surface Pressure
+        units     : hPa
+        level     : L0
+    mslp:
+        long_name : Mean Sea-Level Pressure
+        units     : hPa
+        level     : L0
+    t_2:
+        long_name : 2-m AGL Temperature
+        units     : K
+        level     : T2
+    td_2:
+        long_name : 2-m AGL dewpoint temperature
+        units     : K
+        level     : T2
+    qv_2:
+        long_name : 2-m AGL water vapor mixing ratio
+        units     : Kg/Kg (unitless)
+        level     : Z2
+    th_v_2:
+        long_name : 100-hPa mixed layer virtual potential temperature
+        units     : K
+        level     : P900
+    theta_e:
+        long_name : 100-hPa mixed layer equivalent potential temperature
+        units     : K
+        level     : P900
+    theta_v:
+        long_name : Virtual Potential Temperature
+        units     : K
+        level     : L0
+    temp_v:
+        long_name : Virtual Temperature
+        units     : K
+        level     : L0
+    temperature_850:
+        long_name : 850-hPa temperature
+        units     : deg F
+        level     : T850
+    temperature_500:
+        long_name : 500-hPa temperature
+        units     : deg F
+        level     : T500
+    temperature_700:
+        long_name : 700-hPa temperature
+        units     : deg F
+        level     : T700
+    td_850:
+        long_name : 850-hPa dewpoint temperature
+        units     : deg F
+        level     : T850
+    td_500:
+        long_name : 850-hPa dewpoint temperature
+        units     : deg F
+        level     : T850
+    td_700:
+        long_name : 850-hPa dewpoint temperature
+        units     : deg F
+        level     : T850
+    pw :
+        long_name : Precipitable Water
+        units     : in
+        level     : L0
+    ctp :
+        long_name : Cloud Top Pressure
+        units     : hPa
+        level     : L0
+    lcl_ml:
+        long_name : 100-hPa mixed layer lifted condensation level height
+        units     : m
+        level     : L100
+    lcl_mu:
+        long_name : Most unstable lifted condensation level height
+        units     : m
+        level     : L0
+    lcl_sfc:
+        long_name : Surface-based lifted condensation level height
+        units     : m
+        level     : L0
+    lfc_ml:
+        long_name : 100-hPa mixed layer level of free convection
+        units     : m
+        level     : L100
+    lfc_mu:
+        long_name : Most unstable level of free convection
+        units     : m
+        level     : L0
+    lfc_sfc:
+        long_name : Surface-based level of free convection
+        units     : m
+        level     : L0
+    cape_ml:
+        long_name : 100-hPa mixed layer CAPE
+        units     : J/Kg
+        level     : L100
+    cape_mu:
+        long_name : Most unstable CAPE
+        units     : J/Kg
+        level     : L0
+    cape_sfc:
+        long_name : Surface-based CAPE
+        units     : J/Kg
+        level     : L0
+    cin_ml:
+        long_name : 100-hPa mixed layer CIN
+        units     : J/Kg
+        level     : L100
+    cin_mu:
+        long_name : Most unstable CIN
+        units     : J/Kg
+        level     : L0
+    cin_sfc:
+        long_name : Surface-based CIN
+        units     : J/Kg
+        level     : L0
+    stp:
+        long_name : 100-hPa mixed layer Significant Tornado Parameter
+        units     : unitless
+        level     : L100
+    stp_srh0to500:
+        long_name : 100-hPa mixed layer significant tornado parameter w/0-500 m SRH
+        units     : unitless
+        level     : L100
+    pbl_mfc:
+        long_name : Boundary-layer moisture convergence
+        units     : g Kg^-1 s^-1
+        level     : L0
+    shear_u_0to1:
+        long_name : U-component of 0-1 km vertical wind shear
+        units     : kts
+        level     : Z1000
+    shear_v_0to1:
+        long_name : V-component of 0-1 km vertical wind shear
+        units     : kts
+        level     : Z1000
+    shear_u_0to6:
+        long_name : U-component of 0-6 km vertical wind shear
+        units     : kts
+        level     : Z6000
+    shear_v_0to6:
+        long_name : V-component of 0-6 km vertical wind shear
+        units     : kts
+        level     : Z6000
+    bunk_r_u:
+        long_name : U-component of Bunkers right-mover storm motion
+        units     : kts
+        level     : L0
+    bunk_r_v:
+        long_name : V-component of Bunkers right-mover storm motion
+        units     : kts
+        level     : L0
+    corf_us_u:
+        long_name : U-component of Corfidi upshear vector
+        units     : kts
+        level     : L0
+    corf_us_v:
+        long_name : v-component of Corfidi upshear vector
+        units     : kts
+        level     : L0
+    corf_ds_u:
+        long_name : U-component of Corfidi downshear vector
+        units     : kts
+        level     : L0
+    corf_ds_v:
+        long_name : V-component of Corfidi downshear vector
+        units     : kts
+        level     : L0
+    srh_0to500 :
+        long_name : 0-500 m storm relative helicity
+        units     : m^2/s^2
+        level     : Z500
+    srh_0to1 :
+        long_name : 0-1 km storm relative helicity
+        units     : m^2/s^2
+        level     : Z1000
+    srh_0to3 :
+        long_name : 0-3 km storm relative helicity
+        units     : m^2/s^2
+        level     : Z3000
+    sw_down:
+        long_name : Downward flux of shortwave radiation at the ground
+        units     : W/m^2
+        level     : L0
+    iwp:
+        long_name : Cloud ice water path
+        units     : unitless
+        level     : L0
+    lwp:
+        long_name : Cloud liquid water path
+        units     : unitless
+        level     : L0
+    u_850_300p:
+        long_name : U-component of 850-300 hPa wind
+        units     : kts
+        level     : P300
+    v_850_300p:
+        long_name : V-component of 850-300 hPa wind
+        units     : kts
+        level     : P300

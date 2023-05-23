@@ -1,0 +1,22 @@
+#!/bin/bash
+
+eventdate=${1-20220411}
+eventnext=$(date -d "$eventdate 1 day" +%Y%m%d)
+
+scriptdir=/oldscratch/ywang/NEWSVAR/news3dvar.2022/scripts
+
+conffile=/oldscratch/ywang/NEWSVAR/news3dvar.2022/scripts/config22_hyb.yaml
+rundir=/scratch/ywang/real_runs
+domain=${rundir}/${eventdate}.dom
+
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}1700 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}1800 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}1900 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}2000 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}2100 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}2200 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}2300 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventnext}0000 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventnext}0100 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventnext}0200 ${rundir}
+${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventnext}0300 ${rundir}

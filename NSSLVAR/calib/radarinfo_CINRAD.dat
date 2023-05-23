@@ -1,0 +1,6 @@
+RADAR_NAME  SITE_NAME     LAT_DEG LAT_MIN LAT_SEC  LON_DEG LON_MIN LON_SEC ELEV
+KTAB        BeiJing       39      48      32      -116     28      18        92
+KTAT        TianJin       39       2      38      -117     43      51        70
+KTAQ        QingDao       35      59      18      -120     13      46       175
+KTBN        NingBo        30       4      12      -121     30       0       458
+KTAS        ShiJiaZ       38      21       6      -114     42      42       134

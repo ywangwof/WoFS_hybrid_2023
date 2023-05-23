@@ -1,0 +1,355 @@
+#!/bin/bash
+
+config() {
+    python3 -c "import yaml;print(yaml.safe_load(open('$1'))$2)"
+}
+
+cmdscp=$(dirname $0)
+rundir="/scratch/ywang/real_runs"
+
+function usage {
+    echo " "
+    echo "    USAGE: $0 [options] [DATETIME] RUNDIR"
+    echo " "
+    echo "    PURPOSE: Run realtime hybrid analysis or forecast at one specific time."
+    echo "             Help to prepare default values in realtime run, for examples,"
+    echo "             DATETIME, configuration file, domain file etc."
+    echo "             Suitable to be called from cron job."
+    echo " "
+    echo "    DATETIME - Case date and time in YYYYMMDDHHmm"
+    echo "               empty for current time (now) round to earliest 15 minutes"
+    echo "    RUNDIR   - Work Directory"
+    echo " "
+    echo "    OPTIONS:"
+    echo "              -h              Display this message"
+    echo "              -n              Show command to be run only"
+    echo "              -nn             Pass show command to nsslvar.py"
+    echo "              -v              Verbose mode"
+    echo "              -r   runno      Case to run"
+    echo "                   1          Initial analysis from HRRRE member"
+    echo "                   2          Initial 15 minute forecast"
+    echo "                   4          Cycled Analysis"
+    echo "                   5          Cycled Forecast"
+    echo "                   6          180-min forecast"
+    echo "                   7          360-min forecast"
+    echo "              -c   confl      File to specify configuration (default file in script)"
+    echo "              -d   domfl      File to specify domain (default file in script)"
+    echo "              -p   prog       Program to be run (passing to nsslvar.py)"
+    echo " "
+    echo "   DEFAULTS:"
+    echo "              cmdscp = $cmdscp"
+    echo "              rundir = $rundir"
+    echo " "
+    echo "                                     -- By Y. Wang (2020.03.05)"
+    echo " "
+    exit $1
+}
+
+#
+# Extract NEWS-e attributes
+#
+function ncattget {
+  #ncks -m -M $1 | grep -E "^Global attribute [0-9]+: (CEN_LAT|CEN_LON|TRUELAT1|TRUELAT2|STAND_LON)" | cut -f 4,11 -d ' '
+  /scratch/software/Odin/python/anaconda2/bin/ncks -x -M $1 | grep -E "(WEST-EAST_GRID_DIMENSION|SOUTH-NORTH_GRID_DIMENSION|CEN_LAT|CEN_LON|TRUELAT1|TRUELAT2|STAND_LON)"
+}
+
+function create_domfl {
+    if [[ $runcase -eq 1 ]]; then
+      echo "Domain file <$domfl> not exist, trying to create ..."
+
+      newsefile="/scratch/wof/realtime/$eventdt/geo_em.d01.nc"
+      echo $newsefile
+
+      #
+      # Wait for NEWS-e file for 3 hours
+      #
+      maxwaitsecs=10800
+      waitsecs=0
+      while [[ $waitsecs -lt $maxwaitsecs ]]; do
+        if [[ -e "$newsefile" ]]; then break; fi
+
+        echo "Waiting for [$newsefile] at $waitsecs ..."
+        sleep 10
+        let waitsecs=$waitsecs+10
+      done
+
+      if [[ ! -e "$newsefile" ]]; then
+        echo "File [$newsefile] not exist."
+        exit
+      fi
+
+      #
+      # Make sure NEWS-e file either old enough or is stable within 5 seconds
+      #
+      last=$(date +%s)
+      current=$(stat -c "%Y" $newsefile)
+
+      let last=$last-600
+      if [[ $current > $last ]]; then            # 10 minute new file
+        while [ "$last" != "$current" ]; do
+           sleep 5
+           last=$current
+           current=$(stat -c "%Y" $newsefile)
+        done
+        echo "File [$newsefile] is now stable at $(date +%Y-%m-%d_%H:%M:%S)."
+      fi
+
+      domains=$(ncattget $newsefile)
+
+      IFS=$'\n' domelements=($domains)
+      for var in ${domelements[@]}; do
+        IFS='= ' keyval=(${var##Global attribute *:})
+        wrfkey=${keyval[0]%%,}
+        val=${keyval[-1]}
+
+        case $wrfkey in
+          WEST-EAST_GRID_DIMENSION)
+            key="nx1"
+            ;;
+          SOUTH-NORTH_GRID_DIMENSION)
+            key="ny1"
+            ;;
+          *)
+            key=${wrfkey}
+            ;;
+        esac
+        declare "$key=$val"
+        echo "$key -> $val"
+      done
+
+      #
+      # determine nprocx
+      #
+      let nx=(${nx1}-1)*2+1
+      let ny=(${ny1}-1)*2+1
+
+      echo "${nx},${ny},1500.0,1500.0,${CEN_LAT},${CEN_LON},${TRUELAT1},${TRUELAT2},${STAND_LON}" > $domfl
+
+    else
+      echo "Domain file <$domfl> not exist, waiting ..."
+      while [[ ! -f $domfl ]]; do
+        sleep 10
+      done
+      sleep 10        # for safety while other process is writing this file
+    fi
+}
+
+#-----------------------------------------------------------------------
+#
+# Default values
+#
+#-----------------------------------------------------------------------
+
+verb=""
+
+fd=0
+if [ -t "$fd" ]; then
+  #echo interactive
+  verb="-v"
+#else
+  #echo non-interactive >>out
+fi
+
+show=0
+runcase=0
+domfl="domain_control.fix"
+confl="$cmdscp/config22_hyb.yaml"
+prog=""
+norun=""
+
+setdate=0
+
+#-----------------------------------------------------------------------
+#
+# Handle command line arguments
+#
+#-----------------------------------------------------------------------
+
+while [[ $# > 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        -h)
+            usage 0
+            ;;
+        -n)
+            show=1
+            ;;
+        -nn)
+            norun="-n"
+            ;;
+        -v)
+            verb="-v"
+            ;;
+        -r)
+            runcase=$2
+            shift      # past argument
+            ;;
+        -c)
+            confl="$2"
+            shift      # past argument
+            ;;
+        -d)
+            domfl="$2"
+            shift      # past argument
+            ;;
+        -p)
+            prog="$2"
+            shift      # past argument
+            ;;
+        -*)
+            echo "Unknown option: $key"
+            exit
+            ;;
+        *)
+            if [[ $key =~ ^[0-9]{12}$ ]]; then
+                dtdefault="$key"
+                setdate=1
+            elif [[ -d $key ]]; then
+                rundir=$key
+            else
+                echo ""
+                echo "ERROR: unknown option, get [$key]."
+                usage -2
+            fi
+            ;;
+    esac
+    shift # past argument or value
+done
+
+#-----------------------------------------------------------------------
+#
+# Handle date and time and get event date
+#
+#-----------------------------------------------------------------------
+
+starth=$(config $confl "['wofstarthour']")
+if [[ $setdate -ne 1 ]]; then
+  if [[ $runcase -eq 1 || $runcase -eq 2 ]]; then
+    dtdefault="$(date -u +%Y%m%d)${starth}00"
+  elif [[ $runcase -eq 4 || $runcase -eq 5 ]]; then
+    #dtdefault=$(echo "$(date -u +%Y%m%d%H%M) - ($(date +%M)%15)" | bc)
+    # Add 5 minutes, so the job can start 5 minutes earlier, but not later than 10 minutes of the expected time.
+    dtdefault=$(echo "$(date -u -d '5 minutes' +%Y%m%d%H%M) - ($(date -d '5 minutes' +%M)%15)" | bc)
+  elif [[ $runcase -gt 5 ]]; then
+    # Add 25 minutes, so the job can start 25 minutes earlier, but not later than 5 minutes of the expected time.
+    dtdefault=$(echo "$(date -u -d '25 minutes' +%Y%m%d%H%M) - ($(date -d '25 minutes' +%M)%30)" | bc)
+  else
+    dtdefault=$(echo "$(date -u +%Y%m%d%H%M) - ($(date +%M)%15)" | bc)
+  fi
+fi
+
+idate=${dtdefault:0:8}    #${name:start:length}
+itime=${dtdefault:8:4}
+iseconds=$(date -d "$idate $itime" +%s)
+
+ihour=${itime:0:2}
+imin=${itime:2:2}
+ihour=${ihour#0}
+imin=${imin#0}
+
+if [[ $ihour -lt $starth ]]; then
+  eventdt=$(date -d "$idate 1 days ago" +%Y%m%d)
+else
+  eventdt=$(date -d @$iseconds +%Y%m%d)
+fi
+
+#eventdir=$rundir/${eventdt}_hyb
+#if [[ $show -ne 1 ]]; then
+#  if [[ ! -d $eventdir ]]; then
+#    mkdir -p $eventdir
+#  fi
+#fi
+
+starts=$(date -d "$eventdt ${starth}00" +%s)
+
+#-----------------------------------------------------------------------
+#
+# If runcase is not given, do analysis only
+#
+# 18:00   1
+# 18:15   4 (count = 1)
+# 18:30   4
+#
+#-----------------------------------------------------------------------
+
+if [[ $runcase -eq 0 ]]; then
+  if [[ $iseconds -gt $starts ]]; then
+    runcase=4
+  else
+    runcase=1
+  fi
+fi
+#-----------------------------------------------------------------------
+#
+# set default domain file
+#
+#-----------------------------------------------------------------------
+
+nens=$(config $confl "['nens']")
+domains=$(config $confl "['domains']")
+
+usedomfl=0
+if [[ $domains == "[]" ]]; then
+    usedomfl=1
+    if [[ ! -r $domfl ]]; then
+        domfl="$rundir/${eventdt}.dom"
+        if [[ ! -r $domfl ]]; then
+            create_domfl
+        fi
+    fi
+else
+    domfl=${domains}
+fi
+
+#-----------------------------------------------------------------------
+#
+#  Print default settings
+#
+#-----------------------------------------------------------------------
+
+echo "runcase  = $runcase,  DATETIME = $dtdefault"
+echo "confl    = $confl"
+echo "domfl    = $domfl"
+
+#-----------------------------------------------------------------------
+#
+#  Actually run the job
+#
+#-----------------------------------------------------------------------
+
+casedir=$rundir/$ddate/${dtime}Z
+count=$(( ($iseconds-$starts)/900 ))
+
+dttime=$dtdefault
+
+runopts="$verb -l $count -c $confl $norun"
+if [[ $usedomfl -eq 1 ]]; then
+    runopts+=" -f $domfl"
+fi
+
+if [[ $prog != "" ]]; then
+    runopts+=" -p $prog"
+fi
+
+if [[ $runcase -eq 5 || $runcase -eq 6 || $runcase -eq 7 ]]; then
+    if [[ $imin -eq 0 || $runcase -eq 6 || $runcase -eq 7 ]]; then
+      let j=$starts
+    else
+      let j=$iseconds-$imin*60
+    fi
+    #ddate1=$(date -d @$j +%Y%m%d)
+    dtime1=$(date -d @$j +%H%M)
+
+    cyclebase=" -b $rundir/$eventdt/${dtime1}Z"
+
+    runopts+=$cyclebase
+fi
+
+cmdstr="$cmdscp/nsslvar.py -r $runcase $runopts $dttime $rundir"
+echo $cmdstr
+
+if [[ $show -ne 1 ]]; then
+  $cmdstr
+fi
