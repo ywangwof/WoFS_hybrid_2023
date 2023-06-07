@@ -14,6 +14,15 @@ else
     set realconfig = ${parentdir}/WOFenv_rlt_2021
 endif
 
+if ($#argv == 2 ) then
+    if ($argv[2] =~ [0-9][0-9][0-9][0-9]) then
+        set starttime = $argv[2]
+    else
+        echo "ERROR: unsupported argument: $argv[2]"
+        exit
+    endif
+endif
+
 echo "Realtime configuration file: $realconfig"
 source ${realconfig}
 
@@ -21,6 +30,16 @@ source ${realconfig}
 set ENVFILE = ${TOP_DIR}/realtime.cfg.${event}
 source $ENVFILE
 #set echo
+
+#
+# modules
+#
+module load compiler/latest
+module load mkl/latest
+module load hmpt/2.27
+
+setenv  PATH ./:/bin:/scratch/software/intel/netcdf/bin:/scratch/software/miniconda3/bin:$PATH
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/scratch/software/intel/netcdf/lib:/scratch/software/intel/hdf5/lib:/scratch/software/intel/grib2/libpng/lib:/scratch/software/intel/grib2/zlib/lib:/scratch/software/miniconda3/lib:/usr/lib64
 
 #setenv ENVDIR ${realconfig:h}
 
@@ -48,14 +67,31 @@ if ( $cycle_start == "21" ) then
    set times = (2300 0000 0100 0200 0300 0400 0500 0600)
 endif
 
-########## LOOP THROUGH FORECAST START TIMES
-foreach btime ( ${times} )
+set indx = 0
+if ($?starttime) then
+    foreach tm ($times)
+        @ indx += 1
+        if ($tm == $starttime) then
+            break
+        endif
+    end
+    #echo $indx, ${times[$indx]}
+endif
 
-    if ( $btime == "2000" ) then
-   while ( ! -e ${SEMA4}/BCs_ready)
-             sleep 60
-       end
-    endif
+set fcst_times = ()
+while ($indx <= $#times)
+    set fcst_times = ($fcst_times $times[$indx])
+    @ indx += 1
+end
+
+########## LOOP THROUGH FORECAST START TIMES
+foreach btime ( ${fcst_times} )
+
+    #if ( $btime == "2000" ) then
+    #    while ( ! -e ${SEMA4}/BCs_ready)
+    #         sleep 60
+    #    end
+    #endif
 
     set hhh  = `echo $btime | cut -c1`
     set mmm  = `echo $btime | cut -c3`
@@ -71,14 +107,15 @@ foreach btime ( ${times} )
     #endif
 
     ### WAIT TO SEE IF THIS ANALYSIS TIME IS COMPLETE
+    echo "WAITING FOR ANALYSIS TO FINISH:" ${fcst_start}
     while ( ! -e ${FCST_DIR}/analysis_${fcst_start}_done )
-          echo "WAITING FOR ANALYSIS TO FINISH:" ${fcst_start}
           sleep 30
     end
 
     source $ENVFILE
 
     touch ${FCST_DIR}/fcst_${fcst_start}_start
+    echo "Starting ${fcst_start}"
 
     setenv FCSTHR_DIR ${FCST_DIR}/${btime}
     mkdir ${FCSTHR_DIR}
@@ -233,6 +270,13 @@ EOF
 
     cat >> ${FCSTHR_DIR}/WoFS_FCST.job << EOF
 
+   module load compiler
+   module load mkl/latest
+   module load hmpt/2.27
+
+   #setenv  PATH ./:/bin:/scratch/software/intel/netcdf/bin:/scratch/software/miniconda3/bin:$PATH
+   setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/scratch/software/intel/netcdf/lib:/scratch/software/intel/hdf5/lib:/scratch/software/intel/grib2/libpng/lib:/scratch/software/intel/grib2/zlib/lib:/scratch/software/miniconda3/lib:/usr/lib64
+
    source ${realconfig}
    source ${TOP_DIR}/realtime.cfg.${event}
    set echo
@@ -267,21 +311,19 @@ EOF
 
     set member = 1
     while ($member <= ${FCST_SIZE})
-        if ( $member <= 9 ) then
-           cd ${FCSTHR_DIR}/ENS_MEM_0${member}
-        else
-           cd ${FCSTHR_DIR}/ENS_MEM_${member}
-        endif
+        set memstr = `printf "%02d" $member`
+        #cd ${FCSTHR_DIR}/ENS_MEM_${memstr}
+        set memdir = "${FCSTHR_DIR}/ENS_MEM_${memstr}"
         set keep_trying = true
 
         while ($keep_trying == 'true')
 
-            set SUCCESS = `grep "wrf: SUCCESS COMPLETE WRF" rsl.out.0000 | cat | wc -l`
-            if ($SUCCESS == 1) then
-
-               set keep_trying = false
-               break
-
+            if (-f $memdir/rsl.out.0000) then
+                grep -q "wrf: SUCCESS COMPLETE WRF" $memdir/rsl.out.0000
+                if ($status == 0) then
+                    set keep_trying = false
+                    break
+                endif
             endif
 
             sleep 30
@@ -290,15 +332,11 @@ EOF
         echo "Done with Forecast for Ensemble Member ${member}"
 
         @ member++
-        cd ..
     end
 
     touch ${FCST_DIR}/fcst_${fcst_start}_done
 
 end
 
-##########################################################################################
 echo '       ************* RUN IS COMPLETE **************       '
-##########################################################################################
 exit (0)
-##########################################################################################

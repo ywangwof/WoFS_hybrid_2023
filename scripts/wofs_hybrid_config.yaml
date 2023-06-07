@@ -12,7 +12,7 @@ run_type: 'rto'
 
 file_start : 'wrfhyb_d01'
 
-eventdate : 20211210
+eventdate : 20220520
 time : 1700
 
 starttimes: [
@@ -71,11 +71,11 @@ n_procs_post_60M: 6
 n_procs_plot: 24
 
 ### Directory config ###
-scriptdir:  /oldscratch/ywang/NEWSVAR/news3dvar.2021/WoF_post/
-fcstroot:   /scratch/ywang/real_runs/
-summarydir: /scratch/ywang/test_runs/summary_files/
-imagedir:   /scratch/ywang/test_runs/images_real/
-flagdir:    /scratch/ywang/test_runs/flags/
+scriptdir:  /scratch/ywang/NEWSVAR/news3dvar.2023/WoF_post2021_hybrid/
+fcstroot:   /scratch/ywang/test_runs/hyb23/
+summarydir: /scratch/ywang/test_runs/hyb23/summary_files/
+imagedir:   /scratch/ywang/test_runs/hyb23/images_real/
+flagdir:    /scratch/ywang/test_runs/hyb23/flags/
 griboutdir: /scratch/brian.matilla/WOFS_2021/GRIB2_RLT/HYB/
 jsondir:    /home/brian.matilla/WOFS_2021/REALTIME/WoF_post/json/
 

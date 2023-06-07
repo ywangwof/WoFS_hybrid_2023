@@ -1504,7 +1504,7 @@ class NSSLCase(threading.Thread):
                 else:
                     nmlgrp["time_control"].auxhist7_outname = "wrfvar_d<domain>_<date>"
                 nmlgrp["time_control"].frames_per_auxhist7 = 1
-                nmlgrp["time_control"].io_form_auxhist7 = 13
+                nmlgrp["time_control"].io_form_auxhist7 = 2
                 nmlgrp["time_control"].gsd_diagnostics = 1
                 nmlgrp["time_control"].auxhist7_interval = 10
                 nmlgrp["time_control"].reset_interval1 = 10

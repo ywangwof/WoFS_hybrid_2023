@@ -4,9 +4,9 @@
 #SBATCH -o LOGDIR/JOBNAME.out
 #SBATCH -e LOGDIR/JOBNAME.err
 #SBATCH -A smallqueue
-#SBATCH -p workq
+#SBATCH -p batch
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=24
+#SBATCH --mem-per-cpu=24G
 #SBATCH -t 01:30:00
 
 
@@ -15,7 +15,7 @@
 # FOR A SERIES OF INITIALIZATION TIMES
 #####################################################
 
-source /home/brian.matilla/miniconda3/etc/profile.d/conda.sh
+source ~/.python
 conda activate wofs_post
 
 #$SLURM_SUBMIT_DIR
@@ -30,7 +30,7 @@ config() {
     python3 -c "import yaml;print(yaml.safe_load(open('$1'))$2)"
 }
 
-confl="/oldscratch/ywang/NEWSVAR/news3dvar.2021/scripts/wofs_hybrid_config.yaml"
+confl="/scratch/ywang/NEWSVAR/news3dvar.2023/scripts/wofs_hybrid_config.yaml"
 
 file_start=$(config $confl "['file_start']")
 script_base=$(config $confl "['scriptdir']")

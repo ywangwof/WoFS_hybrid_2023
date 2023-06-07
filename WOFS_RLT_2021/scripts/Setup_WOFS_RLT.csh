@@ -94,8 +94,10 @@ echo "setenv ADDNOISEDIR ${CENTRALDIR}/additive_noise" >> ${TOP_DIR}/realtime.cf
 echo "setenv DARTDIR ${CENTRALDIR}/DART-mhn" >> ${TOP_DIR}/realtime.cfg.${event}
 echo "setenv SEMA4 ${RUNDIR}/flags" >> ${TOP_DIR}/realtime.cfg.${event}
 echo "setenv HRRRE_DIR /scratch/wof/MODEL_DATA/HRRRE" >> ${TOP_DIR}/realtime.cfg.${event}
-echo "setenv REF_DIR /work/rt_obs/REF" >> ${TOP_DIR}/realtime.cfg.${event}
-echo "setenv VEL_DIR /work/rt_obs/VEL" >> ${TOP_DIR}/realtime.cfg.${event}
+#echo "setenv REF_DIR /work/rt_obs/REF" >> ${TOP_DIR}/realtime.cfg.${event}
+#echo "setenv VEL_DIR /work/rt_obs/VEL" >> ${TOP_DIR}/realtime.cfg.${event}
+echo "setenv REF_DIR /work/rt_obs/REF/2021_RT" >> ${TOP_DIR}/realtime.cfg.${event}
+echo "setenv VEL_DIR /work/rt_obs/VEL/2021_RT" >> ${TOP_DIR}/realtime.cfg.${event}
 echo "setenv SGP_DIR /scratch/junjun.hu/realtime/OBSGEN" >> ${TOP_DIR}/realtime.cfg.${event}
 echo "setenv FED_DIR /scratch/brian.matilla/WoFS_2020/GLM/OBS_SEQ/${event}" >> ${TOP_DIR}/realtime.cfg.${event}
 echo "setenv UAS_DIR /oldscratch/yaping.wang/realtime/OBSGEN/UAS" >> ${TOP_DIR}/realtime.cfg.${event}

@@ -1,12 +1,12 @@
 #!/bin/bash
 
-eventdate=${1-20220411}
+eventdate=${1-20210503}
 eventnext=$(date -d "$eventdate 1 day" +%Y%m%d)
 
-scriptdir=/oldscratch/ywang/NEWSVAR/news3dvar.2022/scripts
+scriptdir=/scratch/ywang/NEWSVAR/news3dvar.2023/scripts
 
-conffile=/oldscratch/ywang/NEWSVAR/news3dvar.2022/scripts/config22_hyb.yaml
-rundir=/scratch/ywang/real_runs
+conffile=/scratch/ywang/NEWSVAR/news3dvar.2023/scripts/config23_hyb.yaml
+rundir=/scratch/ywang/test_runs/hyb23
 domain=${rundir}/${eventdate}.dom
 
 ${scriptdir}/runhr-rlt -r 7 -c ${conffile} -d ${domain} ${eventdate}1700 ${rundir}

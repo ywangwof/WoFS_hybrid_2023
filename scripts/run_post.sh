@@ -1,7 +1,7 @@
 #!/bin/bash
 
-scpdir="/oldscratch/ywang/NEWSVAR/news3dvar.2022/scripts"
-realdir="/scratch/ywang/real_runs"
+scpdir="/scratch/ywang/NEWSVAR/news3dvar.2023/scripts"
+realdir="/scratch/ywang/test_runs/hyb23"
 
 run="hyb"
 eventdt=$(date +%Y%m%d)
@@ -101,9 +101,9 @@ done
 #else
 #  fcstroot="/scratch/ywang/real_runs/"
 #fi
-fcstroot="/scratch/ywang/real_runs"
+fcstroot="/scratch/ywang/test_runs/hyb23"
 
-scriptdir="/oldscratch/ywang/NEWSVAR/news3dvar.2022/WoF_post/"
+scriptdir="/scratch/ywang/NEWSVAR/news3dvar.2023/WoF_post2021_hybrid"
 summarydir="$realdir/summary_files_${run}/"
 imagedir="$realdir/images_${run}/"
 flagdir="$realdir/summary_files_${run}/flags/"
